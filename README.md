@@ -2,6 +2,8 @@
 
 **Macro automation tool for "Where Winds Meet"**
 
+<img width="886" height="693" alt="image" src="https://github.com/user-attachments/assets/3952baf7-9867-4796-8626-7841168665e6" />
+
 Built with C# + WPF + Material Design
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/S0ul3r/Bober-macro-maker)
