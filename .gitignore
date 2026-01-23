@@ -72,6 +72,9 @@ Data/
 *.db
 *.sqlite
 
+# Published executables (too large for GitHub)
+publish/
+
 # OS
 .DS_Store
 Thumbs.db
