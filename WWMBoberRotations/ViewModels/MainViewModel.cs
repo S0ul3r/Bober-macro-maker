@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -86,9 +86,9 @@ namespace WWMBoberRotations.ViewModels
             _hotkeyManager.Initialize(windowHandle);
         }
 
-        public void HandleHotkey(int hotkeyId)
+        public async Task HandleHotkeyAsync(int hotkeyId)
         {
-            _hotkeyManager.HandleHotkey(hotkeyId);
+            await _hotkeyManager.HandleHotkeyAsync(hotkeyId);
         }
 
         private void ToggleSystem()

@@ -53,7 +53,7 @@ namespace WWMBoberRotations.Views
             if (msg == WM_HOTKEY)
             {
                 int hotkeyId = wParam.ToInt32();
-                _viewModel.HandleHotkey(hotkeyId);
+                _ = _viewModel.HandleHotkeyAsync(hotkeyId);
                 handled = true;
             }
             return IntPtr.Zero;

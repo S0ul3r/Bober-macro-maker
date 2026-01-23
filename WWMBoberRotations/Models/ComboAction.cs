@@ -1,3 +1,4 @@
+using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -5,12 +6,18 @@ namespace WWMBoberRotations.Models
 {
     public class ComboAction
     {
+        private int _duration;
+
         [JsonConverter(typeof(StringEnumConverter))]
         public ActionType Type { get; set; }
         
         public string? Key { get; set; }
         
-        public int Duration { get; set; }
+        public int Duration 
+        { 
+            get => _duration;
+            set => _duration = Math.Max(0, value); // Ensure non-negative duration
+        }
         
         [JsonConverter(typeof(StringEnumConverter))]
         public MouseButton Button { get; set; }

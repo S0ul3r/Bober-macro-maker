@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows.Interop;
 using WWMBoberRotations.Models;
 
 namespace WWMBoberRotations.Services
@@ -13,9 +12,12 @@ namespace WWMBoberRotations.Services
     {
         private readonly ComboExecutor _executor;
         private readonly Dictionary<string, Combo> _combos = new();
+        private readonly Dictionary<int, string> _hotkeyIds = new();
         private bool _isActive;
         private IntPtr _windowHandle;
-        private string _panicButton = "rmb"; // Default panic button
+        private string _panicButton = "rmb";
+        private int _nextHotkeyId = 1;
+        private CancellationTokenSource? _monitoringCts;
 
         // Windows API for global hooks
         [DllImport("user32.dll")]
@@ -28,8 +30,8 @@ namespace WWMBoberRotations.Services
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         private const int WM_HOTKEY = 0x0312;
-        private readonly Dictionary<int, string> _hotkeyIds = new();
-        private int _nextHotkeyId = 1;
+        private const int PANIC_BUTTON_CHECK_INTERVAL = 50;
+        private const int PANIC_BUTTON_DEBOUNCE = 500;
 
         public event EventHandler<string>? StatusChanged;
 
@@ -38,12 +40,15 @@ namespace WWMBoberRotations.Services
 
         public HotkeyManager(ComboExecutor executor)
         {
-            _executor = executor;
+            _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _executor.StatusChanged += (s, msg) => StatusChanged?.Invoke(s, msg);
         }
 
         public void SetPanicButton(string key)
         {
+            if (string.IsNullOrWhiteSpace(key))
+                return;
+
             _panicButton = key.ToLower();
             StatusChanged?.Invoke(this, $"Panic button set to: {key}");
         }
@@ -64,20 +69,23 @@ namespace WWMBoberRotations.Services
 
         public void Start()
         {
-            if (_isActive) return;
+            if (_isActive) 
+                return;
 
             _isActive = true;
             RegisterAllHotkeys();
-            StartMouseMonitoring();
+            StartPanicButtonMonitoring();
             
             StatusChanged?.Invoke(this, "Macro system active");
         }
 
         public void Stop()
         {
-            if (!_isActive) return;
+            if (!_isActive) 
+                return;
 
             _isActive = false;
+            StopPanicButtonMonitoring();
             UnregisterAllHotkeys();
             _executor.Stop();
             
@@ -91,7 +99,7 @@ namespace WWMBoberRotations.Services
             foreach (var kvp in _combos)
             {
                 var hotkey = kvp.Key;
-                var vkCode = GetVirtualKeyCode(hotkey);
+                var vkCode = KeyMapper.GetVirtualKeyCode(hotkey);
                 
                 if (vkCode != 0)
                 {
@@ -111,28 +119,40 @@ namespace WWMBoberRotations.Services
             _hotkeyIds.Clear();
         }
 
-        public async void HandleHotkey(int hotkeyId)
+        public async Task HandleHotkeyAsync(int hotkeyId)
         {
-            if (!_isActive) return;
+            if (!_isActive) 
+                return;
 
-            if (_hotkeyIds.TryGetValue(hotkeyId, out var hotkey))
+            if (_hotkeyIds.TryGetValue(hotkeyId, out var hotkey) &&
+                _combos.TryGetValue(hotkey, out var combo))
             {
-                if (_combos.TryGetValue(hotkey, out var combo))
-                {
-                    await _executor.ExecuteComboAsync(combo);
-                }
+                await _executor.ExecuteComboAsync(combo);
             }
         }
 
-        private void StartMouseMonitoring()
+        private void StartPanicButtonMonitoring()
         {
-            // Start background task to monitor panic button
-            Task.Run(async () =>
+            _monitoringCts?.Cancel();
+            _monitoringCts = new CancellationTokenSource();
+
+            Task.Run(async () => await MonitorPanicButtonAsync(_monitoringCts.Token), _monitoringCts.Token);
+        }
+
+        private void StopPanicButtonMonitoring()
+        {
+            _monitoringCts?.Cancel();
+            _monitoringCts?.Dispose();
+            _monitoringCts = null;
+        }
+
+        private async Task MonitorPanicButtonAsync(CancellationToken cancellationToken)
+        {
+            try
             {
-                while (_isActive)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    // Get virtual key code for panic button
-                    int panicKeyCode = GetPanicButtonVirtualKey();
+                    var panicKeyCode = GetPanicButtonVirtualKey();
                     
                     if (panicKeyCode != 0 && (GetAsyncKeyState(panicKeyCode) & 0x8000) != 0)
                     {
@@ -140,100 +160,29 @@ namespace WWMBoberRotations.Services
                         {
                             _executor.Stop();
                             StatusChanged?.Invoke(this, "Combo cancelled (panic button)");
-                            await Task.Delay(500); // Debounce
+                            await Task.Delay(PANIC_BUTTON_DEBOUNCE, cancellationToken);
                         }
                     }
                     
-                    await Task.Delay(50); // Check every 50ms
+                    await Task.Delay(PANIC_BUTTON_CHECK_INTERVAL, cancellationToken);
                 }
-            });
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+            }
         }
 
         private int GetPanicButtonVirtualKey()
         {
-            return _panicButton switch
-            {
-                "lmb" or "leftclick" or "leftmouse" => 0x01,
-                "rmb" or "rightclick" or "rightmouse" => 0x02,
-                "mmb" or "middleclick" or "middlemouse" => 0x04,
-                "mouse4" or "xbutton1" => 0x05,
-                "mouse5" or "xbutton2" => 0x06,
-                _ => GetVirtualKeyCode(_panicButton)
-            };
-        }
-
-        private int GetVirtualKeyCode(string key)
-        {
-            if (string.IsNullOrEmpty(key)) return 0;
-
-            var lowerKey = key.ToLower();
-
-            // Numbers
-            if (lowerKey.Length == 1)
-            {
-                var c = lowerKey[0];
-                if (c >= '0' && c <= '9') return 0x30 + (c - '0');
-                if (c >= 'a' && c <= 'z') return 0x41 + (c - 'a');
-            }
-
-            // Special keys
-            return lowerKey switch
-            {
-                // Common keys
-                "space" or "spacebar" => 0x20,
-                "enter" or "return" => 0x0D,
-                "tab" => 0x09,
-                "esc" or "escape" => 0x1B,
-                "backspace" or "back" => 0x08,
-                "delete" or "del" => 0x2E,
-                "insert" or "ins" => 0x2D,
-                
-                // Modifier keys
-                "shift" or "lshift" => 0x10,
-                "rshift" => 0xA1,
-                "ctrl" or "control" or "lctrl" => 0x11,
-                "rctrl" => 0xA3,
-                "alt" or "lalt" => 0x12,
-                "ralt" => 0xA5,
-                
-                // Lock keys
-                "capslock" or "caps" => 0x14,
-                "numlock" or "num" => 0x90,
-                "scrolllock" or "scroll" => 0x91,
-                
-                // Arrow keys
-                "up" or "arrowup" or "uparrow" => 0x26,
-                "down" or "arrowdown" or "downarrow" => 0x28,
-                "left" or "arrowleft" or "leftarrow" => 0x25,
-                "right" or "arrowright" or "rightarrow" => 0x27,
-                
-                // Navigation keys
-                "home" => 0x24,
-                "end" => 0x23,
-                "pageup" or "pgup" => 0x21,
-                "pagedown" or "pgdown" => 0x22,
-                
-                // Function keys
-                "f1" => 0x70,
-                "f2" => 0x71,
-                "f3" => 0x72,
-                "f4" => 0x73,
-                "f5" => 0x74,
-                "f6" => 0x75,
-                "f7" => 0x76,
-                "f8" => 0x77,
-                "f9" => 0x78,
-                "f10" => 0x79,
-                "f11" => 0x7A,
-                "f12" => 0x7B,
-                
-                _ => 0
-            };
+            var mouseCode = KeyMapper.GetMouseButtonCode(_panicButton);
+            return mouseCode != 0 ? mouseCode : KeyMapper.GetVirtualKeyCode(_panicButton);
         }
 
         public void Dispose()
         {
             Stop();
+            _monitoringCts?.Dispose();
         }
     }
 }

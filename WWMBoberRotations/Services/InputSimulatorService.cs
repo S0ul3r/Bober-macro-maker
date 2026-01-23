@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using WindowsInput;
-using WindowsInput.Native;
 using WWMBoberRotations.Models;
 
 namespace WWMBoberRotations.Services
@@ -22,6 +21,7 @@ namespace WWMBoberRotations.Services
         private const uint MOUSEEVENTF_XUP = 0x0100;
         private const uint XBUTTON1 = 0x0001;
         private const uint XBUTTON2 = 0x0002;
+        private const int MOUSE_CLICK_DELAY = 50;
 
         public InputSimulatorService()
         {
@@ -52,48 +52,57 @@ namespace WWMBoberRotations.Services
 
         private void PressKeyOrMouseButton(string key)
         {
-            var lowerKey = key.ToLower();
+            // Check if it's a mouse button first
+            if (KeyMapper.IsMouseButton(key))
+            {
+                ExecuteMouseButtonClick(key);
+                return;
+            }
             
-            // Check if it's a mouse button
-            switch (lowerKey)
+            // Otherwise treat it as a keyboard key
+            var virtualKey = KeyMapper.ToVirtualKeyCode(key);
+            _simulator.Keyboard.KeyPress(virtualKey);
+        }
+
+        private void ExecuteMouseButtonClick(string mouseButton)
+        {
+            var lowerButton = mouseButton.ToLower();
+            
+            switch (lowerButton)
             {
                 case "lmb":
                 case "leftclick":
                 case "leftmouse":
                     _simulator.Mouse.LeftButtonClick();
-                    return;
+                    break;
                     
                 case "rmb":
                 case "rightclick":
                 case "rightmouse":
                     _simulator.Mouse.RightButtonClick();
-                    return;
+                    break;
                     
                 case "mmb":
                 case "middleclick":
                 case "middlemouse":
                     ClickMiddleButton();
-                    return;
+                    break;
                     
                 case "mouse4":
                 case "xbutton1":
                     ClickXButton(XBUTTON1);
-                    return;
+                    break;
                     
                 case "mouse5":
                 case "xbutton2":
                     ClickXButton(XBUTTON2);
-                    return;
+                    break;
             }
-            
-            // Otherwise treat it as a keyboard key
-            var virtualKey = ParseKey(key);
-            _simulator.Keyboard.KeyPress(virtualKey);
         }
 
         private async Task HoldKeyAsync(string key, int duration, CancellationToken cancellationToken)
         {
-            var virtualKey = ParseKey(key);
+            var virtualKey = KeyMapper.ToVirtualKeyCode(key);
             _simulator.Keyboard.KeyDown(virtualKey);
             
             try
@@ -131,18 +140,18 @@ namespace WWMBoberRotations.Services
         private void ClickMiddleButton()
         {
             mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
-            Thread.Sleep(50);
+            Thread.Sleep(MOUSE_CLICK_DELAY);
             mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
         }
 
         private void ClickXButton(uint button)
         {
             mouse_event(MOUSEEVENTF_XDOWN, 0, 0, button, 0);
-            Thread.Sleep(50);
+            Thread.Sleep(MOUSE_CLICK_DELAY);
             mouse_event(MOUSEEVENTF_XUP, 0, 0, button, 0);
         }
 
-        private async Task DelayAsync(int duration, CancellationToken cancellationToken)
+        private static async Task DelayAsync(int duration, CancellationToken cancellationToken)
         {
             // Break delay into smaller chunks for better responsiveness
             const int chunkSize = 100;
@@ -154,82 +163,6 @@ namespace WWMBoberRotations.Services
                 await Task.Delay(delay, cancellationToken);
                 remaining -= delay;
             }
-        }
-
-        private VirtualKeyCode ParseKey(string key)
-        {
-            var lowerKey = key.ToLower();
-
-            // Special keys
-            return lowerKey switch
-            {
-                // Common keys
-                "space" or "spacebar" => VirtualKeyCode.SPACE,
-                "enter" or "return" => VirtualKeyCode.RETURN,
-                "tab" => VirtualKeyCode.TAB,
-                "esc" or "escape" => VirtualKeyCode.ESCAPE,
-                "backspace" or "back" => VirtualKeyCode.BACK,
-                "delete" or "del" => VirtualKeyCode.DELETE,
-                "insert" or "ins" => VirtualKeyCode.INSERT,
-                
-                // Modifier keys
-                "shift" or "lshift" => VirtualKeyCode.SHIFT,
-                "rshift" => VirtualKeyCode.RSHIFT,
-                "ctrl" or "control" or "lctrl" => VirtualKeyCode.CONTROL,
-                "rctrl" => VirtualKeyCode.RCONTROL,
-                "alt" or "lalt" => VirtualKeyCode.MENU,
-                "ralt" => VirtualKeyCode.RMENU,
-                
-                // Lock keys
-                "capslock" or "caps" => VirtualKeyCode.CAPITAL,
-                "numlock" or "num" => VirtualKeyCode.NUMLOCK,
-                "scrolllock" or "scroll" => VirtualKeyCode.SCROLL,
-                
-                // Arrow keys
-                "up" or "arrowup" or "uparrow" => VirtualKeyCode.UP,
-                "down" or "arrowdown" or "downarrow" => VirtualKeyCode.DOWN,
-                "left" or "arrowleft" or "leftarrow" => VirtualKeyCode.LEFT,
-                "right" or "arrowright" or "rightarrow" => VirtualKeyCode.RIGHT,
-                
-                // Navigation keys
-                "home" => VirtualKeyCode.HOME,
-                "end" => VirtualKeyCode.END,
-                "pageup" or "pgup" => VirtualKeyCode.PRIOR,
-                "pagedown" or "pgdown" => VirtualKeyCode.NEXT,
-                
-                // Function keys
-                "f1" => VirtualKeyCode.F1,
-                "f2" => VirtualKeyCode.F2,
-                "f3" => VirtualKeyCode.F3,
-                "f4" => VirtualKeyCode.F4,
-                "f5" => VirtualKeyCode.F5,
-                "f6" => VirtualKeyCode.F6,
-                "f7" => VirtualKeyCode.F7,
-                "f8" => VirtualKeyCode.F8,
-                "f9" => VirtualKeyCode.F9,
-                "f10" => VirtualKeyCode.F10,
-                "f11" => VirtualKeyCode.F11,
-                "f12" => VirtualKeyCode.F12,
-                
-                _ => ParseRegularKey(lowerKey)
-            };
-        }
-
-        private VirtualKeyCode ParseRegularKey(string key)
-        {
-            if (string.IsNullOrEmpty(key)) return VirtualKeyCode.SPACE;
-
-            var c = key[0];
-            
-            // Numbers
-            if (c >= '0' && c <= '9')
-                return (VirtualKeyCode)(0x30 + (c - '0'));
-            
-            // Letters
-            if (c >= 'a' && c <= 'z')
-                return (VirtualKeyCode)(0x41 + (c - 'a'));
-
-            return VirtualKeyCode.SPACE;
         }
     }
 }
