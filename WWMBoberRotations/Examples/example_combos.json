@@ -1,0 +1,178 @@
+[
+  {
+    "Name": "Basic Attack Combo",
+    "Hotkey": "1",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyPress",
+        "Key": "q"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 500
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "e"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 300
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "r"
+      }
+    ]
+  },
+  {
+    "Name": "Charged Attack",
+    "Hotkey": "2",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyHold",
+        "Key": "space",
+        "Duration": 1500
+      },
+      {
+        "Type": "Delay",
+        "Duration": 200
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "q"
+      }
+    ]
+  },
+  {
+    "Name": "Full Rotation",
+    "Hotkey": "3",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyPress",
+        "Key": "q"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 800
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "w"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 300
+      },
+      {
+        "Type": "KeyHold",
+        "Key": "e",
+        "Duration": 700
+      },
+      {
+        "Type": "Delay",
+        "Duration": 500
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "r"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 200
+      },
+      {
+        "Type": "MouseClick",
+        "Button": "Left"
+      },
+      {
+        "Type": "MouseClick",
+        "Button": "Left"
+      }
+    ]
+  },
+  {
+    "Name": "Quick Dodge",
+    "Hotkey": "4",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyPress",
+        "Key": "space"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 100
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "shift"
+      }
+    ]
+  },
+  {
+    "Name": "Buff Sequence",
+    "Hotkey": "5",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyPress",
+        "Key": "f1"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 1000
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "f2"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 1000
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "f3"
+      }
+    ]
+  },
+  {
+    "Name": "Mouse Button Combo",
+    "Hotkey": "6",
+    "IsEnabled": true,
+    "Actions": [
+      {
+        "Type": "KeyPress",
+        "Key": "lmb"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 100
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "rmb"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 200
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "mouse4"
+      },
+      {
+        "Type": "Delay",
+        "Duration": 100
+      },
+      {
+        "Type": "KeyPress",
+        "Key": "mouse5"
+      }
+    ]
+  }
+]

@@ -1,0 +1,161 @@
+<Window x:Class="WWMBoberRotations.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="WWM Bober Rotations" 
+        Height="700" Width="900"
+        MinHeight="600" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        FontFamily="{materialDesign:MaterialDesignFont}"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseDown="Window_PreviewMouseDown">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" 
+                   Text="WWM Bober Rotations" 
+                   FontSize="34"
+                   FontWeight="Bold"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,20"/>
+
+        <!-- Start/Stop Button -->
+        <Button Grid.Row="1" 
+                x:Name="StartStopButton"
+                Height="60"
+                Margin="0,0,0,10"
+                Command="{Binding ToggleSystemCommand}"
+                Style="{StaticResource MaterialDesignRaisedButton}">
+            <Button.Content>
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Play" Width="24" Height="24" Margin="0,0,10,0"/>
+                    <TextBlock Text="START MACRO SYSTEM" FontSize="16" FontWeight="Bold"/>
+                </StackPanel>
+            </Button.Content>
+        </Button>
+
+        <!-- Panic Button Setup -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+            <TextBlock Text="{Binding PanicButtonText}" 
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource SecondaryHueMidBrush}"
+                       FontWeight="Bold"
+                       Margin="0,0,10,0"/>
+            <Button Content="Set Panic Button" 
+                    Command="{Binding SetPanicButtonCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Height="28"
+                    Padding="10,4"/>
+        </StackPanel>
+
+        <!-- Combos List -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" 
+                           Text="Combos" 
+                           FontSize="20"
+                           FontWeight="Bold"
+                           Margin="15,15,15,10"/>
+
+                <ListBox Grid.Row="1" 
+                         ItemsSource="{Binding Combos}"
+                         SelectedItem="{Binding SelectedCombo}"
+                         Margin="10"
+                         SelectionMode="Single">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="MinHeight" Value="32"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Margin="0" FontSize="13"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                    <Button Command="{Binding NewComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Plus" Margin="0,0,5,0"/>
+                            <TextBlock Text="New Combo"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding EditComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Pencil" Margin="0,0,5,0"/>
+                            <TextBlock Text="Edit Combo"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding DeleteComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Delete" Margin="0,0,5,0"/>
+                            <TextBlock Text="Delete"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- File Operations -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+            <Button Command="{Binding SaveCombosCommand}" Margin="5" Style="{StaticResource MaterialDesignOutlinedButton}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="ContentSave" Margin="0,0,5,0"/>
+                    <TextBlock Text="Save"/>
+                </StackPanel>
+            </Button>
+            
+            <Button Command="{Binding LoadCombosCommand}" Margin="5" Style="{StaticResource MaterialDesignOutlinedButton}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FolderOpen" Margin="0,0,5,0"/>
+                    <TextBlock Text="Load"/>
+                </StackPanel>
+            </Button>
+            
+            <Button Command="{Binding ExportCommand}" Margin="5" Style="{StaticResource MaterialDesignOutlinedButton}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Export" Margin="0,0,5,0"/>
+                    <TextBlock Text="Export"/>
+                </StackPanel>
+            </Button>
+            
+            <Button Command="{Binding ImportCommand}" Margin="5" Style="{StaticResource MaterialDesignOutlinedButton}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Import" Margin="0,0,5,0"/>
+                    <TextBlock Text="Import"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="5" 
+                Background="{DynamicResource PrimaryHueMidBrush}" 
+                Padding="10,8"
+                CornerRadius="3">
+            <TextBlock Text="{Binding StatusMessage}" 
+                       Foreground="White"
+                       FontWeight="Medium"/>
+        </Border>
+    </Grid>
+</Window>
