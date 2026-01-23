@@ -4,6 +4,8 @@
 
 Built with C# + WPF + Material Design
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/S0ul3r/Bober-macro-maker)
+
 ---
 
 ## Overview
