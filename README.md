@@ -2,7 +2,7 @@
 
 **Macro automation tool for "Where Winds Meet"**
 
-<img width="886" height="693" alt="image" src="https://github.com/user-attachments/assets/3952baf7-9867-4796-8626-7841168665e6" />
+<img width="886" height="693" alt="image" src="https://github.com/user-attachments/assets/6ddefce9-0692-43bb-9837-48d926c2f2da" />
 
 Built with C# + WPF + Material Design
 
