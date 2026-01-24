@@ -2,19 +2,66 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using WindowsInput;
 using WWMBoberRotations.Models;
 
 namespace WWMBoberRotations.Services
 {
     public class InputSimulatorService
     {
-        private readonly IInputSimulator _simulator;
+        // SendInput structures
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint Type;
+            public INPUTUNION Data;
+        }
 
-        // Windows API for mouse events
+        [StructLayout(LayoutKind.Explicit)]
+        private struct INPUTUNION
+        {
+            [FieldOffset(0)]
+            public MOUSEINPUT Mouse;
+            [FieldOffset(0)]
+            public KEYBDINPUT Keyboard;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        // Windows API
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
         [DllImport("user32.dll")]
         private static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, int dwExtraInfo);
 
+        [DllImport("user32.dll")]
+        private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+        private const uint INPUT_KEYBOARD = 1;
+        private const uint KEYEVENTF_KEYDOWN = 0x0000;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+        private const uint KEYEVENTF_SCANCODE = 0x0008;
+        private const uint MAPVK_VK_TO_VSC = 0;
+        
         private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
         private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
         private const uint MOUSEEVENTF_XDOWN = 0x0080;
@@ -22,11 +69,8 @@ namespace WWMBoberRotations.Services
         private const uint XBUTTON1 = 0x0001;
         private const uint XBUTTON2 = 0x0002;
         private const int MOUSE_CLICK_DELAY = 50;
-
-        public InputSimulatorService()
-        {
-            _simulator = new InputSimulator();
-        }
+        private const int KEY_PRESS_DELAY = 50;
+        private const int KEY_RELEASE_DELAY = 30;
 
         public async Task ExecuteActionAsync(ComboAction action, CancellationToken cancellationToken)
         {
@@ -59,9 +103,52 @@ namespace WWMBoberRotations.Services
                 return;
             }
             
-            // Otherwise treat it as a keyboard key
-            var virtualKey = KeyMapper.ToVirtualKeyCode(key);
-            _simulator.Keyboard.KeyPress(virtualKey);
+            // Otherwise treat it as a keyboard key - use SendInput with SCAN CODES
+            var virtualKey = KeyMapper.GetVirtualKeyCode(key);
+            ushort vkCode = (ushort)virtualKey;
+            ushort scanCode = (ushort)MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
+            
+            // Create key down input with SCANCODE flag
+            var inputDown = new INPUT
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new INPUTUNION
+                {
+                    Keyboard = new KEYBDINPUT
+                    {
+                        wVk = 0,  // Set to 0 when using scan code
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE,  // Use scan code instead of virtual key
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            // Create key up input with SCANCODE flag
+            var inputUp = new INPUT
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new INPUTUNION
+                {
+                    Keyboard = new KEYBDINPUT
+                    {
+                        wVk = 0,  // Set to 0 when using scan code
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,  // Scan code + key up
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            // Send key down
+            SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
+            Thread.Sleep(KEY_PRESS_DELAY);
+
+            // Send key up
+            SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
+            Thread.Sleep(KEY_RELEASE_DELAY);
         }
 
         private void ExecuteMouseButtonClick(string mouseButton)
@@ -73,37 +160,67 @@ namespace WWMBoberRotations.Services
                 case "lmb":
                 case "leftclick":
                 case "leftmouse":
-                    _simulator.Mouse.LeftButtonClick();
+                    mouse_event(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
+                    Thread.Sleep(MOUSE_CLICK_DELAY);
+                    mouse_event(0x0004, 0, 0, 0, 0); // MOUSEEVENTF_LEFTUP
+                    Thread.Sleep(30);
                     break;
                     
                 case "rmb":
                 case "rightclick":
                 case "rightmouse":
-                    _simulator.Mouse.RightButtonClick();
+                    mouse_event(0x0008, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTDOWN
+                    Thread.Sleep(MOUSE_CLICK_DELAY);
+                    mouse_event(0x0010, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTUP
+                    Thread.Sleep(30);
                     break;
                     
                 case "mmb":
                 case "middleclick":
                 case "middlemouse":
                     ClickMiddleButton();
+                    Thread.Sleep(30);
                     break;
                     
                 case "mouse4":
                 case "xbutton1":
                     ClickXButton(XBUTTON1);
+                    Thread.Sleep(30);
                     break;
                     
                 case "mouse5":
                 case "xbutton2":
                     ClickXButton(XBUTTON2);
+                    Thread.Sleep(30);
                     break;
             }
         }
 
         private async Task HoldKeyAsync(string key, int duration, CancellationToken cancellationToken)
         {
-            var virtualKey = KeyMapper.ToVirtualKeyCode(key);
-            _simulator.Keyboard.KeyDown(virtualKey);
+            var virtualKey = KeyMapper.GetVirtualKeyCode(key);
+            ushort vkCode = (ushort)virtualKey;
+            ushort scanCode = (ushort)MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
+            
+            // Create key down input with SCANCODE
+            var inputDown = new INPUT
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new INPUTUNION
+                {
+                    Keyboard = new KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            // Send key down
+            SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
             
             try
             {
@@ -111,7 +228,25 @@ namespace WWMBoberRotations.Services
             }
             finally
             {
-                _simulator.Keyboard.KeyUp(virtualKey);
+                // Create key up input with SCANCODE
+                var inputUp = new INPUT
+                {
+                    Type = INPUT_KEYBOARD,
+                    Data = new INPUTUNION
+                    {
+                        Keyboard = new KEYBDINPUT
+                        {
+                            wVk = 0,
+                            wScan = scanCode,
+                            dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                };
+
+                // Send key up
+                SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
             }
         }
 
@@ -120,10 +255,14 @@ namespace WWMBoberRotations.Services
             switch (button)
             {
                 case Models.MouseButton.Left:
-                    _simulator.Mouse.LeftButtonClick();
+                    mouse_event(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
+                    Thread.Sleep(MOUSE_CLICK_DELAY);
+                    mouse_event(0x0004, 0, 0, 0, 0); // MOUSEEVENTF_LEFTUP
                     break;
                 case Models.MouseButton.Right:
-                    _simulator.Mouse.RightButtonClick();
+                    mouse_event(0x0008, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTDOWN
+                    Thread.Sleep(MOUSE_CLICK_DELAY);
+                    mouse_event(0x0010, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTUP
                     break;
                 case Models.MouseButton.Middle:
                     ClickMiddleButton();

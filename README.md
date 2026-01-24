@@ -17,11 +17,13 @@ WWM Bober Rotations is a safe, external macro automation tool that helps you exe
 ## Features
 
 - **Custom Combo Creator** - Design unlimited attack sequences
+- **Macro Recorder** - Record key presses and mouse clicks with automatic timing
 - **Smart Input System** - Key presses, holds, mouse clicks, and delays
-- **Hotkey Activation** - Trigger combos with any keyboard key
+- **Hotkey Activation** - Trigger combos with any keyboard key or mouse button
 - **Panic Button** - Instant emergency stop (configurable, default: Right Mouse Button)
 - **Auto-Save** - Automatic backup every 30 seconds with crash recovery
 - **Precise Timing** - Millisecond-accurate delays and holds
+- **Drag-and-Drop Reordering** - Easily rearrange actions in combos
 - **Beautiful Material Design UI** - Modern, professional dark theme interface
 - **Import/Export** - Share combos with friends
 - **100% Safe** - No injection, no memory reading, completely external
@@ -87,7 +89,7 @@ WWMBoberRotations.exe
 - **mouse4** - Side Button 1 (XButton1)
 - **mouse5** - Side Button 2 (XButton2)
 
-**Note:** Always enter keys in lowercase!
+**Note:** Always enter keys in lowercase! Mouse buttons can be used as hotkeys and in actions.
 
 ## Panic Button
 
@@ -96,6 +98,26 @@ The panic button instantly stops any running combo. Perfect for emergency situat
 **Default:** Right Mouse Button (RMB)
 
 You can customize the panic button in the Settings section (click "Set Panic Button", then press your desired key).
+
+## Macro Recorder
+
+The Macro Recorder allows you to record your key presses and mouse clicks in real-time, with automatic timing capture between actions.
+
+**How to use:**
+1. Click "Record Macro" button
+2. Set the recording hotkey (e.g., Insert) - this key toggles recording on/off
+3. Press the record hotkey to start recording
+4. Press any keys/mouse buttons you want to record
+5. Press the record hotkey again to stop recording
+6. Enter a combo name
+7. Click "SAVE AS COMBO" to save your recording
+8. You'll automatically be taken to the Combo Editor to assign a hotkey and make adjustments
+
+**Features:**
+- **Precise Timing** - Automatically captures delays between actions (minimum 50ms)
+- **Easy Editing** - Recorded actions appear in a list that you can delete or rearrange
+- **Drag-and-Drop** - Reorder actions by dragging them to new positions
+- **Real-time Feedback** - See a visual indicator showing where actions will be moved during drag operations
 
 ## Auto-Save & Crash Recovery
 

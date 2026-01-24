@@ -11,14 +11,19 @@
     <Authors>WWM Bober</Authors>
     <Product>WWM Bober Rotations</Product>
     <Description>Safe macro tool for Where Winds Meet</Description>
+    <ApplicationIcon>Assets\app_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
     <PackageReference Include="MaterialDesignColors" Version="3.1.0" />
-    <PackageReference Include="InputSimulatorCore" Version="1.0.5" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="GlobalHotKey" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app_icon.png" />
+    <None Include="Assets\app_icon.ico" />
   </ItemGroup>
 
 </Project>

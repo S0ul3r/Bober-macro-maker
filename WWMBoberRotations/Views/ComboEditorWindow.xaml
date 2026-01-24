@@ -39,18 +39,24 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
             <TextBox Grid.Column="0" 
                      x:Name="HotkeyTextBox"
-                     materialDesign:HintAssist.Hint="Hotkey (press a key)"
+                     materialDesign:HintAssist.Hint="Hotkey"
                      Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}"
                      IsReadOnly="True"
-                     PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,0,10,0"/>
             
             <Button Grid.Column="1" 
+                    Content="Set Hotkey"
+                    Click="SetHotkey_Click"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="0,0,10,0"/>
+            
+            <Button Grid.Column="2" 
                     Content="Clear"
                     Click="ClearHotkey_Click"
                     Style="{StaticResource MaterialDesignOutlinedButton}"/>
@@ -71,28 +77,47 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" 
-                           Text="Actions" 
+                <TextBlock Grid.Row="0"
+                           Text="Actions"
                            FontSize="16"
                            FontWeight="Bold"
                            Margin="15,15,15,10"/>
 
-                <ListBox Grid.Row="1" 
-                         ItemsSource="{Binding Actions}"
-                         SelectedItem="{Binding SelectedAction}"
-                         Margin="10">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
-                            <Setter Property="Padding" Value="8,4"/>
-                            <Setter Property="MinHeight" Value="32"/>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" Margin="0" FontSize="13"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <!-- Wrap ListBox in Grid for overlay -->
+                <Grid Grid.Row="1">
+                    <ListBox x:Name="ActionsListBox"
+                             ItemsSource="{Binding Actions}"
+                             SelectedItem="{Binding SelectedAction}"
+                             AllowDrop="True"
+                             PreviewMouseLeftButtonDown="ActionsListBox_PreviewMouseLeftButtonDown"
+                             PreviewMouseMove="ActionsListBox_PreviewMouseMove"
+                             Drop="ActionsListBox_Drop"
+                             DragOver="ActionsListBox_DragOver"
+                             Margin="10">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
+                                <Setter Property="Padding" Value="8,4"/>
+                                <Setter Property="MinHeight" Value="32"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Margin="0" FontSize="13"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    
+                    <!-- Drop indicator line -->
+                    <Canvas x:Name="DropIndicatorCanvas" 
+                            IsHitTestVisible="False"
+                            Margin="10,0,10,0">
+                        <Border x:Name="DropIndicator"
+                                Background="Orange"
+                                Height="2"
+                                Width="0"
+                                Visibility="Collapsed"/>
+                    </Canvas>
+                </Grid>
 
                 <Grid Grid.Row="2" Margin="10">
                     <Grid.ColumnDefinitions>

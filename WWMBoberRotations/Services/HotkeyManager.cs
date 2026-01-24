@@ -18,6 +18,8 @@ namespace WWMBoberRotations.Services
         private string _panicButton = "rmb";
         private int _nextHotkeyId = 1;
         private CancellationTokenSource? _monitoringCts;
+        private CancellationTokenSource? _mouseMonitoringCts;
+        private readonly Dictionary<string, bool> _mouseButtonStates = new();
 
         // Windows API for global hooks
         [DllImport("user32.dll")]
@@ -60,10 +62,34 @@ namespace WWMBoberRotations.Services
 
         public void UpdateCombos(IEnumerable<Combo> combos)
         {
-            _combos.Clear();
-            foreach (var combo in combos.Where(c => c.IsEnabled && !string.IsNullOrEmpty(c.Hotkey)))
+            // Check for duplicate hotkeys
+            var hotkeyCombos = combos.Where(c => c.IsEnabled && !string.IsNullOrEmpty(c.Hotkey)).ToList();
+            var duplicates = hotkeyCombos
+                .GroupBy(c => c.Hotkey!.ToLower())
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicates.Any())
             {
-                _combos[combo.Hotkey!.ToLower()] = combo;
+                StatusChanged?.Invoke(this, $"Warning: Duplicate hotkeys detected: {string.Join(", ", duplicates)}");
+            }
+
+            // Clear and rebuild combo dictionary
+            _combos.Clear();
+            foreach (var combo in hotkeyCombos)
+            {
+                var hotkeyLower = combo.Hotkey!.ToLower();
+                if (!_combos.ContainsKey(hotkeyLower)) // Only add first combo with this hotkey
+                {
+                    _combos[hotkeyLower] = combo;
+                }
+            }
+
+            // Re-register hotkeys if system is active
+            if (_isActive)
+            {
+                RegisterAllHotkeys();
             }
         }
 
@@ -86,6 +112,7 @@ namespace WWMBoberRotations.Services
 
             _isActive = false;
             StopPanicButtonMonitoring();
+            StopMouseButtonMonitoring();
             UnregisterAllHotkeys();
             _executor.Stop();
             
@@ -99,14 +126,30 @@ namespace WWMBoberRotations.Services
             foreach (var kvp in _combos)
             {
                 var hotkey = kvp.Key;
+                
+                // Skip mouse buttons - they cannot be registered as global hotkeys
+                // They will be handled through GetAsyncKeyState monitoring
+                if (KeyMapper.IsMouseButton(hotkey))
+                {
+                    continue;
+                }
+                
                 var vkCode = KeyMapper.GetVirtualKeyCode(hotkey);
                 
                 if (vkCode != 0)
                 {
                     var id = _nextHotkeyId++;
-                    RegisterHotKey(_windowHandle, id, 0, (uint)vkCode);
-                    _hotkeyIds[id] = hotkey;
+                    if (RegisterHotKey(_windowHandle, id, 0, (uint)vkCode))
+                    {
+                        _hotkeyIds[id] = hotkey;
+                    }
                 }
+            }
+
+            // Start monitoring mouse buttons if any combo uses them
+            if (_combos.Keys.Any(k => KeyMapper.IsMouseButton(k)))
+            {
+                StartMouseButtonMonitoring();
             }
         }
 
@@ -179,10 +222,63 @@ namespace WWMBoberRotations.Services
             return mouseCode != 0 ? mouseCode : KeyMapper.GetVirtualKeyCode(_panicButton);
         }
 
+        private void StartMouseButtonMonitoring()
+        {
+            _mouseMonitoringCts?.Cancel();
+            _mouseMonitoringCts = new CancellationTokenSource();
+
+            Task.Run(async () => await MonitorMouseButtonsAsync(_mouseMonitoringCts.Token), _mouseMonitoringCts.Token);
+        }
+
+        private void StopMouseButtonMonitoring()
+        {
+            _mouseMonitoringCts?.Cancel();
+            _mouseMonitoringCts?.Dispose();
+            _mouseMonitoringCts = null;
+            _mouseButtonStates.Clear();
+        }
+
+        private async Task MonitorMouseButtonsAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    foreach (var kvp in _combos.Where(c => KeyMapper.IsMouseButton(c.Key)))
+                    {
+                        var hotkey = kvp.Key;
+                        var combo = kvp.Value;
+                        var mouseCode = KeyMapper.GetMouseButtonCode(hotkey);
+
+                        if (mouseCode != 0)
+                        {
+                            var isPressed = (GetAsyncKeyState(mouseCode) & 0x8000) != 0;
+                            var wasPressed = _mouseButtonStates.GetValueOrDefault(hotkey, false);
+
+                            // Detect rising edge (button just pressed)
+                            if (isPressed && !wasPressed && !_executor.IsExecuting)
+                            {
+                                _ = _executor.ExecuteComboAsync(combo);
+                            }
+
+                            _mouseButtonStates[hotkey] = isPressed;
+                        }
+                    }
+
+                    await Task.Delay(50, cancellationToken); // Check every 50ms
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+            }
+        }
+
         public void Dispose()
         {
             Stop();
             _monitoringCts?.Dispose();
+            _mouseMonitoringCts?.Dispose();
         }
     }
 }

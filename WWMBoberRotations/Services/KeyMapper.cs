@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using WindowsInput.Native;
 
 namespace WWMBoberRotations.Services
 {
@@ -135,71 +134,6 @@ namespace WWMBoberRotations.Services
         public static bool IsMouseButton(string key)
         {
             return !string.IsNullOrEmpty(key) && _mouseButtons.ContainsKey(key.ToLower());
-        }
-
-        public static VirtualKeyCode ToVirtualKeyCode(string key)
-        {
-            if (string.IsNullOrEmpty(key))
-                return VirtualKeyCode.SPACE;
-
-            var lowerKey = key.ToLower();
-
-            return lowerKey switch
-            {
-                "space" or "spacebar" => VirtualKeyCode.SPACE,
-                "enter" or "return" => VirtualKeyCode.RETURN,
-                "tab" => VirtualKeyCode.TAB,
-                "esc" or "escape" => VirtualKeyCode.ESCAPE,
-                "backspace" or "back" => VirtualKeyCode.BACK,
-                "delete" or "del" => VirtualKeyCode.DELETE,
-                "insert" or "ins" => VirtualKeyCode.INSERT,
-                "shift" or "lshift" => VirtualKeyCode.SHIFT,
-                "rshift" => VirtualKeyCode.RSHIFT,
-                "ctrl" or "control" or "lctrl" => VirtualKeyCode.CONTROL,
-                "rctrl" => VirtualKeyCode.RCONTROL,
-                "alt" or "lalt" => VirtualKeyCode.MENU,
-                "ralt" => VirtualKeyCode.RMENU,
-                "capslock" or "caps" => VirtualKeyCode.CAPITAL,
-                "numlock" or "num" => VirtualKeyCode.NUMLOCK,
-                "scrolllock" or "scroll" => VirtualKeyCode.SCROLL,
-                "up" or "arrowup" or "uparrow" => VirtualKeyCode.UP,
-                "down" or "arrowdown" or "downarrow" => VirtualKeyCode.DOWN,
-                "left" or "arrowleft" or "leftarrow" => VirtualKeyCode.LEFT,
-                "right" or "arrowright" or "rightarrow" => VirtualKeyCode.RIGHT,
-                "home" => VirtualKeyCode.HOME,
-                "end" => VirtualKeyCode.END,
-                "pageup" or "pgup" => VirtualKeyCode.PRIOR,
-                "pagedown" or "pgdown" => VirtualKeyCode.NEXT,
-                "f1" => VirtualKeyCode.F1,
-                "f2" => VirtualKeyCode.F2,
-                "f3" => VirtualKeyCode.F3,
-                "f4" => VirtualKeyCode.F4,
-                "f5" => VirtualKeyCode.F5,
-                "f6" => VirtualKeyCode.F6,
-                "f7" => VirtualKeyCode.F7,
-                "f8" => VirtualKeyCode.F8,
-                "f9" => VirtualKeyCode.F9,
-                "f10" => VirtualKeyCode.F10,
-                "f11" => VirtualKeyCode.F11,
-                "f12" => VirtualKeyCode.F12,
-                _ => ParseSingleCharacter(lowerKey)
-            };
-        }
-
-        private static VirtualKeyCode ParseSingleCharacter(string key)
-        {
-            if (string.IsNullOrEmpty(key))
-                return VirtualKeyCode.SPACE;
-
-            var c = key[0];
-            
-            if (c >= '0' && c <= '9')
-                return (VirtualKeyCode)(0x30 + (c - '0'));
-            
-            if (c >= 'a' && c <= 'z')
-                return (VirtualKeyCode)(0x41 + (c - 'a'));
-
-            return VirtualKeyCode.SPACE;
         }
     }
 }

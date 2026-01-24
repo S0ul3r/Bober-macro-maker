@@ -18,10 +18,10 @@ namespace WWMBoberRotations.ViewModels
         private readonly ComboExecutor _executor;
         private readonly HotkeyManager _hotkeyManager;
         
-        private string _statusMessage = "Ready";
+        private string _statusMessage = "";
         private bool _isSystemActive;
         private Combo? _selectedCombo;
-        private string _panicButtonText = "Panic Button: rmb (click to change)";
+        private string _panicButtonText = "Panic Button: rmb";
         private bool _isWaitingForPanicButton;
         private bool _isAutoSaveEnabled = true;
         private CancellationTokenSource? _autoSaveCts;
@@ -79,6 +79,7 @@ namespace WWMBoberRotations.ViewModels
         public ICommand ToggleSystemCommand { get; }
         public ICommand NewComboCommand { get; }
         public ICommand EditComboCommand { get; }
+        public ICommand RecordMacroCommand { get; }
         public ICommand DeleteComboCommand { get; }
         public ICommand SaveCombosCommand { get; }
         public ICommand LoadCombosCommand { get; }
@@ -101,6 +102,7 @@ namespace WWMBoberRotations.ViewModels
             ToggleSystemCommand = new RelayCommand(ToggleSystem);
             NewComboCommand = new RelayCommand(NewCombo);
             EditComboCommand = new RelayCommand(EditCombo, () => SelectedCombo != null);
+            RecordMacroCommand = new RelayCommand(RecordMacro);
             DeleteComboCommand = new RelayCommand(DeleteCombo, () => SelectedCombo != null);
             SaveCombosCommand = new RelayCommand(SaveCombos);
             LoadCombosCommand = new RelayCommand(LoadCombos);
@@ -180,6 +182,54 @@ namespace WWMBoberRotations.ViewModels
             }
         }
 
+        private void RecordMacro()
+        {
+            var recorderWindow = new MacroRecorderWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (recorderWindow.ShowDialog() == true && recorderWindow.RecordedCombo != null)
+            {
+                var combo = recorderWindow.RecordedCombo;
+                Combos.Add(combo);
+                SelectedCombo = combo;
+                MarkAsChanged();
+                StatusMessage = $"Recorded macro '{combo.Name}' with {combo.Actions.Count} actions";
+
+                // Open combo editor to allow user to edit/assign hotkey
+                var editorWindow = new ComboEditorWindow(combo)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+
+                if (editorWindow.ShowDialog() == true && editorWindow.Result != null)
+                {
+                    // Update the existing combo object instead of replacing it
+                    // This preserves the binding and triggers property change notifications
+                    combo.Name = editorWindow.Result.Name;
+                    combo.Hotkey = editorWindow.Result.Hotkey;
+                    combo.IsEnabled = editorWindow.Result.IsEnabled;
+                    combo.Actions.Clear();
+                    foreach (var action in editorWindow.Result.Actions)
+                    {
+                        combo.Actions.Add(action);
+                    }
+                    
+                    MarkAsChanged();
+                    
+                    // Force refresh of the list by raising collection changed
+                    var index = Combos.IndexOf(combo);
+                    if (index >= 0)
+                    {
+                        Combos.RemoveAt(index);
+                        Combos.Insert(index, combo);
+                        SelectedCombo = combo;
+                    }
+                }
+            }
+        }
+
         private void SaveCombos()
         {
             try
@@ -255,7 +305,6 @@ namespace WWMBoberRotations.ViewModels
                     Combos.Add(combo);
                 }
                 HasUnsavedChanges = false;
-                StatusMessage = $"Loaded {Combos.Count} combos";
             }
             catch (Exception ex)
             {

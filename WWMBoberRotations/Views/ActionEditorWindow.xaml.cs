@@ -85,17 +85,37 @@ namespace WWMBoberRotations.Views
             };
             stack.Children.Add(label);
 
+            // Input row with TextBox and Button
+            var inputRow = new Grid();
+            inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            inputRow.Margin = new Thickness(0, 0, 0, 10);
+
             _keyTextBox = new TextBox
             {
                 Style = (Style)FindResource("MaterialDesignOutlinedTextBox"),
-                Margin = new Thickness(0, 0, 0, 10)
+                Margin = new Thickness(0, 0, 10, 0)
             };
             HintAssist.SetHint(_keyTextBox, "Enter key (e.g., q, w, e, space, f1)");
             
             if (_action?.Type == ActionType.KeyPress)
                 _keyTextBox.Text = _action.Key;
             
-            stack.Children.Add(_keyTextBox);
+            Grid.SetColumn(_keyTextBox, 0);
+            inputRow.Children.Add(_keyTextBox);
+
+            var captureButton = new Button
+            {
+                Content = "Capture Key",
+                Style = (Style)FindResource("MaterialDesignRaisedButton"),
+                Height = 40,
+                Padding = new Thickness(15, 10, 15, 10)
+            };
+            captureButton.Click += (s, e) => CaptureKeyPress();
+            Grid.SetColumn(captureButton, 1);
+            inputRow.Children.Add(captureButton);
+
+            stack.Children.Add(inputRow);
 
             var info = new TextBlock
             {
@@ -126,17 +146,37 @@ namespace WWMBoberRotations.Views
             };
             stack.Children.Add(label1);
 
+            // Input row with TextBox and Button
+            var inputRow = new Grid();
+            inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            inputRow.Margin = new Thickness(0, 0, 0, 15);
+
             _keyTextBox = new TextBox
             {
                 Style = (Style)FindResource("MaterialDesignOutlinedTextBox"),
-                Margin = new Thickness(0, 0, 0, 15)
+                Margin = new Thickness(0, 0, 10, 0)
             };
             HintAssist.SetHint(_keyTextBox, "Enter key");
             
             if (_action?.Type == ActionType.KeyHold)
                 _keyTextBox.Text = _action.Key;
             
-            stack.Children.Add(_keyTextBox);
+            Grid.SetColumn(_keyTextBox, 0);
+            inputRow.Children.Add(_keyTextBox);
+
+            var captureButton = new Button
+            {
+                Content = "Capture Key",
+                Style = (Style)FindResource("MaterialDesignRaisedButton"),
+                Height = 40,
+                Padding = new Thickness(15, 10, 15, 10)
+            };
+            captureButton.Click += (s, e) => CaptureKeyPress();
+            Grid.SetColumn(captureButton, 1);
+            inputRow.Children.Add(captureButton);
+
+            stack.Children.Add(inputRow);
 
             var label2 = new TextBlock
             {
@@ -311,6 +351,66 @@ namespace WWMBoberRotations.Views
         {
             DialogResult = false;
             Close();
+        }
+
+        private void CaptureKeyPress()
+        {
+            if (_keyTextBox == null) return;
+
+            _keyTextBox.Text = "Press any key...";
+            _keyTextBox.IsReadOnly = true;
+
+            // Tymczasowo przejąć focus
+            Focus();
+
+            // Zarejestrować PreviewKeyDown na całym oknie
+            PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
+            PreviewKeyDown += ActionEditorWindow_PreviewKeyDown;
+        }
+
+        private void ActionEditorWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (_keyTextBox?.IsReadOnly != true) return;
+
+            PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
+
+            // Mapowanie Key na string
+            string keyName = e.Key.ToString().ToLower();
+
+            // Specjalne przypadki
+            keyName = e.Key switch
+            {
+                System.Windows.Input.Key.Space => "space",
+                System.Windows.Input.Key.Return => "enter",
+                System.Windows.Input.Key.Escape => "esc",
+                System.Windows.Input.Key.Tab => "tab",
+                System.Windows.Input.Key.Back => "backspace",
+                System.Windows.Input.Key.Delete => "delete",
+                System.Windows.Input.Key.Insert => "insert",
+                System.Windows.Input.Key.CapsLock => "capslock",
+                System.Windows.Input.Key.NumLock => "numlock",
+                System.Windows.Input.Key.Scroll => "scrolllock",
+                System.Windows.Input.Key.Up => "up",
+                System.Windows.Input.Key.Down => "down",
+                System.Windows.Input.Key.Left => "left",
+                System.Windows.Input.Key.Right => "right",
+                System.Windows.Input.Key.Home => "home",
+                System.Windows.Input.Key.End => "end",
+                System.Windows.Input.Key.PageUp => "pageup",
+                System.Windows.Input.Key.PageDown => "pagedown",
+                System.Windows.Input.Key.LeftShift => "lshift",
+                System.Windows.Input.Key.RightShift => "rshift",
+                System.Windows.Input.Key.LeftCtrl => "lctrl",
+                System.Windows.Input.Key.RightCtrl => "rctrl",
+                System.Windows.Input.Key.LeftAlt => "lalt",
+                System.Windows.Input.Key.RightAlt => "ralt",
+                _ => keyName
+            };
+
+            _keyTextBox.Text = keyName;
+            _keyTextBox.IsReadOnly = false;
+
+            e.Handled = true;
         }
     }
 }
