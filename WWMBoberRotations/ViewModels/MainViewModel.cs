@@ -1,5 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -21,6 +23,11 @@ namespace WWMBoberRotations.ViewModels
         private Combo? _selectedCombo;
         private string _panicButtonText = "Panic Button: rmb (click to change)";
         private bool _isWaitingForPanicButton;
+        private bool _isAutoSaveEnabled = true;
+        private CancellationTokenSource? _autoSaveCts;
+        private bool _hasUnsavedChanges;
+
+        private const int AUTO_SAVE_INTERVAL_SECONDS = 30;
 
         public ObservableCollection<Combo> Combos { get; } = new();
 
@@ -48,6 +55,27 @@ namespace WWMBoberRotations.ViewModels
             set => SetProperty(ref _panicButtonText, value);
         }
 
+        public bool IsAutoSaveEnabled
+        {
+            get => _isAutoSaveEnabled;
+            set
+            {
+                if (SetProperty(ref _isAutoSaveEnabled, value))
+                {
+                    if (value)
+                        StartAutoSave();
+                    else
+                        StopAutoSave();
+                }
+            }
+        }
+
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            set => SetProperty(ref _hasUnsavedChanges, value);
+        }
+
         public ICommand ToggleSystemCommand { get; }
         public ICommand NewComboCommand { get; }
         public ICommand EditComboCommand { get; }
@@ -66,6 +94,9 @@ namespace WWMBoberRotations.ViewModels
 
             _hotkeyManager.StatusChanged += (s, msg) => StatusMessage = msg;
 
+            // Monitor collection changes for auto-save
+            Combos.CollectionChanged += OnCombosChanged;
+
             // Commands
             ToggleSystemCommand = new RelayCommand(ToggleSystem);
             NewComboCommand = new RelayCommand(NewCombo);
@@ -77,8 +108,12 @@ namespace WWMBoberRotations.ViewModels
             ImportCommand = new RelayCommand(ImportCombos);
             SetPanicButtonCommand = new RelayCommand(SetPanicButton);
 
-            // Load combos
-            LoadCombos();
+            // Check for autosave before loading
+            CheckForAutoSave();
+            
+            // Start auto-save timer
+            if (IsAutoSaveEnabled)
+                StartAutoSave();
         }
 
         public void InitializeHotkeyManager(IntPtr windowHandle)
@@ -112,7 +147,7 @@ namespace WWMBoberRotations.ViewModels
             if (editor.ShowDialog() == true && editor.Result != null)
             {
                 Combos.Add(editor.Result);
-                SaveCombos();
+                MarkAsChanged();
             }
         }
 
@@ -123,7 +158,7 @@ namespace WWMBoberRotations.ViewModels
             var editor = new ComboEditorWindow(SelectedCombo);
             if (editor.ShowDialog() == true)
             {
-                SaveCombos();
+                MarkAsChanged();
             }
         }
 
@@ -141,7 +176,7 @@ namespace WWMBoberRotations.ViewModels
             if (result == MessageBoxResult.Yes)
             {
                 Combos.Remove(SelectedCombo);
-                SaveCombos();
+                MarkAsChanged();
             }
         }
 
@@ -150,11 +185,62 @@ namespace WWMBoberRotations.ViewModels
             try
             {
                 _storageService.SaveCombos(Combos);
+                HasUnsavedChanges = false;
                 StatusMessage = "Combos saved successfully";
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to save combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CheckForAutoSave()
+        {
+            if (_storageService.HasAutoSave())
+            {
+                var autoSaveTime = _storageService.GetAutoSaveTime();
+                var message = autoSaveTime.HasValue 
+                    ? $"An autosave was found from {autoSaveTime.Value:yyyy-MM-dd HH:mm:ss}.\n\nDo you want to restore it?"
+                    : "An autosave was found. Do you want to restore it?";
+
+                var result = MessageBox.Show(
+                    message,
+                    "Restore Autosave",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    LoadAutoSave();
+                    return;
+                }
+                else
+                {
+                    _storageService.DeleteAutoSave();
+                }
+            }
+
+            LoadCombos();
+        }
+
+        private void LoadAutoSave()
+        {
+            try
+            {
+                var combos = _storageService.LoadAutoSave();
+                Combos.Clear();
+                foreach (var combo in combos)
+                {
+                    Combos.Add(combo);
+                }
+                HasUnsavedChanges = true;
+                StatusMessage = $"Restored {Combos.Count} combos from autosave";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load autosave: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LoadCombos();
             }
         }
 
@@ -168,11 +254,61 @@ namespace WWMBoberRotations.ViewModels
                 {
                     Combos.Add(combo);
                 }
+                HasUnsavedChanges = false;
                 StatusMessage = $"Loaded {Combos.Count} combos";
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to load combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnCombosChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            MarkAsChanged();
+        }
+
+        private void MarkAsChanged()
+        {
+            HasUnsavedChanges = true;
+        }
+
+        private void StartAutoSave()
+        {
+            StopAutoSave();
+            _autoSaveCts = new CancellationTokenSource();
+            
+            Task.Run(async () => await AutoSaveLoopAsync(_autoSaveCts.Token), _autoSaveCts.Token);
+        }
+
+        private void StopAutoSave()
+        {
+            _autoSaveCts?.Cancel();
+            _autoSaveCts?.Dispose();
+            _autoSaveCts = null;
+        }
+
+        private async Task AutoSaveLoopAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(AUTO_SAVE_INTERVAL_SECONDS), cancellationToken);
+                    
+                    if (HasUnsavedChanges && Combos.Count > 0)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            _storageService.AutoSaveCombos(Combos);
+                            StatusMessage = $"Auto-saved at {DateTime.Now:HH:mm:ss}";
+                        });
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
             }
         }
 
@@ -216,7 +352,7 @@ namespace WWMBoberRotations.ViewModels
                     {
                         Combos.Add(combo);
                     }
-                    SaveCombos();
+                    MarkAsChanged();
                     MessageBox.Show($"Imported {imported.Count} combos successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -246,6 +382,7 @@ namespace WWMBoberRotations.ViewModels
 
         public void Cleanup()
         {
+            StopAutoSave();
             _hotkeyManager.Stop();
             _hotkeyManager.Dispose();
         }

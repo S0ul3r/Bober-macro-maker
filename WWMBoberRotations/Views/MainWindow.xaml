@@ -46,17 +46,47 @@
         </Button>
 
         <!-- Panic Button Setup -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-            <TextBlock Text="{Binding PanicButtonText}" 
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource SecondaryHueMidBrush}"
-                       FontWeight="Bold"
-                       Margin="0,0,10,0"/>
-            <Button Content="Set Panic Button" 
-                    Command="{Binding SetPanicButtonCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Height="28"
-                    Padding="10,4"/>
+        <StackPanel Grid.Row="2" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,15">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                <TextBlock Text="{Binding PanicButtonText}" 
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SecondaryHueMidBrush}"
+                           FontWeight="Bold"
+                           Margin="0,0,10,0"/>
+                <Button Content="Set Panic Button" 
+                        Command="{Binding SetPanicButtonCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Height="28"
+                        Padding="10,4"/>
+            </StackPanel>
+            
+            <!-- Auto-save Toggle -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <materialDesign:PackIcon Kind="ContentSaveAll" 
+                                         Width="16" 
+                                         Height="16" 
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,5,0"
+                                         Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                <TextBlock Text="Auto-save:" 
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Margin="0,0,5,0"/>
+                <ToggleButton IsChecked="{Binding IsAutoSaveEnabled}"
+                              Style="{StaticResource MaterialDesignSwitchToggleButton}"
+                              ToolTip="Auto-save every 30 seconds"/>
+                <TextBlock Text="(every 30s)"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Margin="5,0,5,0"
+                           Opacity="0.7"/>
+                <TextBlock Text="• unsaved"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource SecondaryHueMidBrush}"
+                           FontWeight="Bold"
+                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- Combos List -->

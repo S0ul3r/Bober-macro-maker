@@ -20,6 +20,7 @@ WWM Bober Rotations is a safe, external macro automation tool that helps you exe
 - **Smart Input System** - Key presses, holds, mouse clicks, and delays
 - **Hotkey Activation** - Trigger combos with any keyboard key
 - **Panic Button** - Instant emergency stop (configurable, default: Right Mouse Button)
+- **Auto-Save** - Automatic backup every 30 seconds with crash recovery
 - **Precise Timing** - Millisecond-accurate delays and holds
 - **Beautiful Material Design UI** - Modern, professional dark theme interface
 - **Import/Export** - Share combos with friends
@@ -95,6 +96,19 @@ The panic button instantly stops any running combo. Perfect for emergency situat
 **Default:** Right Mouse Button (RMB)
 
 You can customize the panic button in the Settings section (click "Set Panic Button", then press your desired key).
+
+## Auto-Save & Crash Recovery
+
+The application automatically saves your combos every **30 seconds** when auto-save is enabled (default: ON).
+
+**Features:**
+- **Automatic backup** - Your work is saved in the background every 30 seconds
+- **Crash recovery** - If the application or computer crashes, you'll be prompted to restore from autosave on next launch
+- **No data loss** - Continue working where you left off
+- **Toggle control** - Enable/disable auto-save using the switch in the UI
+- **Unsaved indicator** - Visual indicator shows when you have unsaved changes
+
+**Note:** Manual save (CTRL+S or Save button) clears the autosave and marks all changes as saved.
 
 ## Building for Distribution
 
