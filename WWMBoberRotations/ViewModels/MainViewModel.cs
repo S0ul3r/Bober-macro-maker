@@ -12,7 +12,7 @@ using WWMBoberRotations.Views;
 
 namespace WWMBoberRotations.ViewModels
 {
-    public class MainViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase, IDisposable
     {
         private readonly ComboStorageService _storageService;
         private readonly ComboExecutor _executor;
@@ -80,6 +80,7 @@ namespace WWMBoberRotations.ViewModels
         public ICommand NewComboCommand { get; }
         public ICommand EditComboCommand { get; }
         public ICommand RecordMacroCommand { get; }
+        public ICommand DuplicateComboCommand { get; }
         public ICommand DeleteComboCommand { get; }
         public ICommand SaveCombosCommand { get; }
         public ICommand LoadCombosCommand { get; }
@@ -94,15 +95,13 @@ namespace WWMBoberRotations.ViewModels
             _hotkeyManager = new HotkeyManager(_executor);
 
             _hotkeyManager.StatusChanged += (s, msg) => StatusMessage = msg;
-
-            // Monitor collection changes for auto-save
             Combos.CollectionChanged += OnCombosChanged;
 
-            // Commands
             ToggleSystemCommand = new RelayCommand(ToggleSystem);
             NewComboCommand = new RelayCommand(NewCombo);
             EditComboCommand = new RelayCommand(EditCombo, () => SelectedCombo != null);
             RecordMacroCommand = new RelayCommand(RecordMacro);
+            DuplicateComboCommand = new RelayCommand(DuplicateCombo, () => SelectedCombo != null);
             DeleteComboCommand = new RelayCommand(DeleteCombo, () => SelectedCombo != null);
             SaveCombosCommand = new RelayCommand(SaveCombos);
             LoadCombosCommand = new RelayCommand(LoadCombos);
@@ -110,10 +109,7 @@ namespace WWMBoberRotations.ViewModels
             ImportCommand = new RelayCommand(ImportCombos);
             SetPanicButtonCommand = new RelayCommand(SetPanicButton);
 
-            // Check for autosave before loading
             CheckForAutoSave();
-            
-            // Start auto-save timer
             if (IsAutoSaveEnabled)
                 StartAutoSave();
         }
@@ -182,6 +178,29 @@ namespace WWMBoberRotations.ViewModels
             }
         }
 
+        private void DuplicateCombo()
+        {
+            if (SelectedCombo == null) return;
+
+            var duplicate = new Combo
+            {
+                Name = SelectedCombo.Name + " - Copy",
+                Hotkey = null,
+                IsEnabled = SelectedCombo.IsEnabled
+            };
+
+            foreach (var action in SelectedCombo.Actions)
+            {
+                duplicate.Actions.Add(action);
+            }
+
+            Combos.Add(duplicate);
+            SelectedCombo = duplicate;
+            MarkAsChanged();
+            StatusMessage = $"Duplicated combo: {duplicate.Name}";
+            Logger.Info($"Duplicated combo: {SelectedCombo.Name} -> {duplicate.Name}");
+        }
+
         private void RecordMacro()
         {
             var recorderWindow = new MacroRecorderWindow
@@ -196,37 +215,45 @@ namespace WWMBoberRotations.ViewModels
                 SelectedCombo = combo;
                 MarkAsChanged();
                 StatusMessage = $"Recorded macro '{combo.Name}' with {combo.Actions.Count} actions";
+                OpenComboEditorForRecordedMacro(combo);
+            }
+        }
 
-                // Open combo editor to allow user to edit/assign hotkey
-                var editorWindow = new ComboEditorWindow(combo)
-                {
-                    Owner = Application.Current.MainWindow
-                };
+        private void OpenComboEditorForRecordedMacro(Combo combo)
+        {
+            var editorWindow = new ComboEditorWindow(combo)
+            {
+                Owner = Application.Current.MainWindow
+            };
 
-                if (editorWindow.ShowDialog() == true && editorWindow.Result != null)
-                {
-                    // Update the existing combo object instead of replacing it
-                    // This preserves the binding and triggers property change notifications
-                    combo.Name = editorWindow.Result.Name;
-                    combo.Hotkey = editorWindow.Result.Hotkey;
-                    combo.IsEnabled = editorWindow.Result.IsEnabled;
-                    combo.Actions.Clear();
-                    foreach (var action in editorWindow.Result.Actions)
-                    {
-                        combo.Actions.Add(action);
-                    }
-                    
-                    MarkAsChanged();
-                    
-                    // Force refresh of the list by raising collection changed
-                    var index = Combos.IndexOf(combo);
-                    if (index >= 0)
-                    {
-                        Combos.RemoveAt(index);
-                        Combos.Insert(index, combo);
-                        SelectedCombo = combo;
-                    }
-                }
+            if (editorWindow.ShowDialog() == true && editorWindow.Result != null)
+            {
+                UpdateComboFromEditorResult(combo, editorWindow.Result);
+                MarkAsChanged();
+                RefreshComboInList(combo);
+            }
+        }
+
+        private void UpdateComboFromEditorResult(Combo target, Combo source)
+        {
+            target.Name = source.Name;
+            target.Hotkey = source.Hotkey;
+            target.IsEnabled = source.IsEnabled;
+            target.Actions.Clear();
+            foreach (var action in source.Actions)
+            {
+                target.Actions.Add(action);
+            }
+        }
+
+        private void RefreshComboInList(Combo combo)
+        {
+            var index = Combos.IndexOf(combo);
+            if (index >= 0)
+            {
+                Combos.RemoveAt(index);
+                Combos.Insert(index, combo);
+                SelectedCombo = combo;
             }
         }
 
@@ -237,10 +264,17 @@ namespace WWMBoberRotations.ViewModels
                 _storageService.SaveCombos(Combos);
                 HasUnsavedChanges = false;
                 StatusMessage = "Combos saved successfully";
+                Logger.Info($"Saved {Combos.Count} combos");
             }
-            catch (Exception ex)
+            catch (System.IO.IOException ex)
             {
-                MessageBox.Show($"Failed to save combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Logger.Error("Failed to save combos - file access error", ex);
+                MessageBox.Show($"Failed to save combos: {ex.Message}\n\nMake sure the file is not open in another program.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Logger.Error("Failed to save combos - access denied", ex);
+                MessageBox.Show("Access denied. Try running the application as administrator.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -286,10 +320,18 @@ namespace WWMBoberRotations.ViewModels
                 }
                 HasUnsavedChanges = true;
                 StatusMessage = $"Restored {Combos.Count} combos from autosave";
+                Logger.Info($"Restored {Combos.Count} combos from autosave");
             }
-            catch (Exception ex)
+            catch (System.IO.IOException ex)
             {
+                Logger.Error("Failed to load autosave - file access error", ex);
                 MessageBox.Show($"Failed to load autosave: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LoadCombos();
+            }
+            catch (Newtonsoft.Json.JsonException ex)
+            {
+                Logger.Error("Failed to load autosave - invalid JSON format", ex);
+                MessageBox.Show("Autosave file is corrupted. Loading normal save instead.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 LoadCombos();
             }
         }
@@ -305,10 +347,17 @@ namespace WWMBoberRotations.ViewModels
                     Combos.Add(combo);
                 }
                 HasUnsavedChanges = false;
+                Logger.Info($"Loaded {Combos.Count} combos");
             }
-            catch (Exception ex)
+            catch (System.IO.IOException ex)
             {
+                Logger.Error("Failed to load combos - file access error", ex);
                 MessageBox.Show($"Failed to load combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Newtonsoft.Json.JsonException ex)
+            {
+                Logger.Error("Failed to load combos - invalid JSON format", ex);
+                MessageBox.Show("Save file is corrupted. Starting with empty combo list.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -357,7 +406,6 @@ namespace WWMBoberRotations.ViewModels
             }
             catch (OperationCanceledException)
             {
-                // Expected when cancellation is requested
             }
         }
 
@@ -375,10 +423,12 @@ namespace WWMBoberRotations.ViewModels
                 try
                 {
                     _storageService.ExportCombos(Combos, dialog.FileName);
+                    Logger.Info($"Exported {Combos.Count} combos to {dialog.FileName}");
                     MessageBox.Show("Combos exported successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex)
+                catch (System.IO.IOException ex)
                 {
+                    Logger.Error("Failed to export combos - file access error", ex);
                     MessageBox.Show($"Failed to export combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
@@ -402,10 +452,21 @@ namespace WWMBoberRotations.ViewModels
                         Combos.Add(combo);
                     }
                     MarkAsChanged();
+                    Logger.Info($"Imported {imported.Count} combos from {dialog.FileName}");
                     MessageBox.Show($"Imported {imported.Count} combos successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex)
+                catch (System.IO.FileNotFoundException)
                 {
+                    MessageBox.Show("File not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                catch (Newtonsoft.Json.JsonException ex)
+                {
+                    Logger.Error("Failed to import combos - invalid JSON format", ex);
+                    MessageBox.Show("Invalid file format. Please select a valid combo export file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                catch (System.IO.IOException ex)
+                {
+                    Logger.Error("Failed to import combos - file access error", ex);
                     MessageBox.Show($"Failed to import combos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
@@ -429,11 +490,18 @@ namespace WWMBoberRotations.ViewModels
 
         public bool IsWaitingForPanicButton => _isWaitingForPanicButton;
 
-        public void Cleanup()
+        public void Dispose()
+        {
+            Cleanup();
+        }
+
+        private void Cleanup()
         {
             StopAutoSave();
             _hotkeyManager.Stop();
             _hotkeyManager.Dispose();
+            
+            Logger.Info("MainViewModel disposed");
         }
     }
 }

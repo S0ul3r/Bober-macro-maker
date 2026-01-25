@@ -1,8 +1,9 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using WWMBoberRotations.Models;
 using MaterialDesignThemes.Wpf;
+using WWMBoberRotations.Models;
+using WWMBoberRotations.Services;
 
 namespace WWMBoberRotations.Views
 {
@@ -11,6 +12,7 @@ namespace WWMBoberRotations.Views
         private ComboAction? _action;
         private TextBox? _keyTextBox;
         private TextBox? _durationTextBox;
+        private TextBox? _delayAfterTextBox;
         private ComboBox? _mouseButtonCombo;
 
         public ComboAction? Result { get; private set; }
@@ -40,8 +42,6 @@ namespace WWMBoberRotations.Views
                 ActionType.Delay => 3,
                 _ => 0
             };
-
-            // Values will be set when ConfigureUI is called
         }
 
         private void ActionTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -85,7 +85,6 @@ namespace WWMBoberRotations.Views
             };
             stack.Children.Add(label);
 
-            // Input row with TextBox and Button
             var inputRow = new Grid();
             inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -116,6 +115,7 @@ namespace WWMBoberRotations.Views
             inputRow.Children.Add(captureButton);
 
             stack.Children.Add(inputRow);
+            AddDelayAfterField(stack);
 
             var info = new TextBlock
             {
@@ -146,7 +146,6 @@ namespace WWMBoberRotations.Views
             };
             stack.Children.Add(label1);
 
-            // Input row with TextBox and Button
             var inputRow = new Grid();
             inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             inputRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -177,6 +176,7 @@ namespace WWMBoberRotations.Views
             inputRow.Children.Add(captureButton);
 
             stack.Children.Add(inputRow);
+            AddDelayAfterField(stack);
 
             var label2 = new TextBlock
             {
@@ -242,6 +242,7 @@ namespace WWMBoberRotations.Views
             }
 
             stack.Children.Add(_mouseButtonCombo);
+            AddDelayAfterField(stack);
             ConfigPanel.Children.Add(stack);
         }
 
@@ -272,6 +273,25 @@ namespace WWMBoberRotations.Views
             ConfigPanel.Children.Add(stack);
         }
 
+        private void AddDelayAfterField(StackPanel stack)
+        {
+            var label = new TextBlock
+            {
+                Text = "Delay after action (milliseconds):",
+                Margin = new Thickness(0, 15, 0, 10)
+            };
+            stack.Children.Add(label);
+
+            _delayAfterTextBox = new TextBox
+            {
+                Style = (Style)FindResource("MaterialDesignOutlinedTextBox")
+            };
+            HintAssist.SetHint(_delayAfterTextBox, "Delay in ms (e.g., 100, 500, 1000)");
+            _delayAfterTextBox.Text = _action?.DelayAfter.ToString() ?? "0";
+            
+            stack.Children.Add(_delayAfterTextBox);
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -280,6 +300,15 @@ namespace WWMBoberRotations.Views
                 var type = selectedItem?.Tag.ToString();
 
                 var action = new ComboAction();
+                int delayAfter = 0;
+                if (!string.IsNullOrWhiteSpace(_delayAfterTextBox?.Text))
+                {
+                    if (!int.TryParse(_delayAfterTextBox.Text, out delayAfter) || delayAfter < 0 || delayAfter > 300000)
+                    {
+                        MessageBox.Show("Delay must be between 0ms and 300000ms.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                }
 
                 switch (type)
                 {
@@ -291,6 +320,7 @@ namespace WWMBoberRotations.Views
                         }
                         action.Type = ActionType.KeyPress;
                         action.Key = _keyTextBox.Text.Trim().ToLower();
+                        action.DelayAfter = delayAfter;
                         break;
 
                     case "KeyHold":
@@ -299,14 +329,15 @@ namespace WWMBoberRotations.Views
                             MessageBox.Show("Please enter a key.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
-                        if (!int.TryParse(_durationTextBox?.Text, out int holdDuration) || holdDuration < 50)
+                        if (!int.TryParse(_durationTextBox?.Text, out int holdDuration) || holdDuration < 50 || holdDuration > 60000)
                         {
-                            MessageBox.Show("Please enter a valid duration (minimum 50ms).", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBox.Show("Please enter a valid duration (50ms - 60000ms).", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
                         action.Type = ActionType.KeyHold;
                         action.Key = _keyTextBox.Text.Trim().ToLower();
                         action.Duration = holdDuration;
+                        action.DelayAfter = delayAfter;
                         break;
 
                     case "MouseClick":
@@ -320,12 +351,13 @@ namespace WWMBoberRotations.Views
                             "XButton2" => MouseButton.XButton2,
                             _ => MouseButton.Left
                         };
+                        action.DelayAfter = delayAfter;
                         break;
 
                     case "Delay":
-                        if (!int.TryParse(_durationTextBox?.Text, out int delayDuration) || delayDuration < 10)
+                        if (!int.TryParse(_durationTextBox?.Text, out int delayDuration) || delayDuration < 10 || delayDuration > 300000)
                         {
-                            MessageBox.Show("Please enter a valid duration (minimum 10ms).", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBox.Show("Please enter a valid duration (10ms - 300000ms).", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
                         action.Type = ActionType.Delay;
@@ -341,8 +373,19 @@ namespace WWMBoberRotations.Views
                 DialogResult = true;
                 Close();
             }
+            catch (FormatException ex)
+            {
+                Logger.Error("Invalid input format in action editor", ex);
+                MessageBox.Show("Invalid input format. Please check your entries.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (ArgumentException ex)
+            {
+                Logger.Error("Invalid argument in action editor", ex);
+                MessageBox.Show($"Invalid input: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
             catch (Exception ex)
             {
+                Logger.Error("Unexpected error in action editor", ex);
                 MessageBox.Show($"Error saving action: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -359,11 +402,7 @@ namespace WWMBoberRotations.Views
 
             _keyTextBox.Text = "Press any key...";
             _keyTextBox.IsReadOnly = true;
-
-            // Tymczasowo przejąć focus
             Focus();
-
-            // Zarejestrować PreviewKeyDown na całym oknie
             PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
             PreviewKeyDown += ActionEditorWindow_PreviewKeyDown;
         }
@@ -373,39 +412,7 @@ namespace WWMBoberRotations.Views
             if (_keyTextBox?.IsReadOnly != true) return;
 
             PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
-
-            // Mapowanie Key na string
-            string keyName = e.Key.ToString().ToLower();
-
-            // Specjalne przypadki
-            keyName = e.Key switch
-            {
-                System.Windows.Input.Key.Space => "space",
-                System.Windows.Input.Key.Return => "enter",
-                System.Windows.Input.Key.Escape => "esc",
-                System.Windows.Input.Key.Tab => "tab",
-                System.Windows.Input.Key.Back => "backspace",
-                System.Windows.Input.Key.Delete => "delete",
-                System.Windows.Input.Key.Insert => "insert",
-                System.Windows.Input.Key.CapsLock => "capslock",
-                System.Windows.Input.Key.NumLock => "numlock",
-                System.Windows.Input.Key.Scroll => "scrolllock",
-                System.Windows.Input.Key.Up => "up",
-                System.Windows.Input.Key.Down => "down",
-                System.Windows.Input.Key.Left => "left",
-                System.Windows.Input.Key.Right => "right",
-                System.Windows.Input.Key.Home => "home",
-                System.Windows.Input.Key.End => "end",
-                System.Windows.Input.Key.PageUp => "pageup",
-                System.Windows.Input.Key.PageDown => "pagedown",
-                System.Windows.Input.Key.LeftShift => "lshift",
-                System.Windows.Input.Key.RightShift => "rshift",
-                System.Windows.Input.Key.LeftCtrl => "lctrl",
-                System.Windows.Input.Key.RightCtrl => "rctrl",
-                System.Windows.Input.Key.LeftAlt => "lalt",
-                System.Windows.Input.Key.RightAlt => "ralt",
-                _ => keyName
-            };
+            string keyName = Services.KeyMapper.WpfKeyToString(e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key);
 
             _keyTextBox.Text = keyName;
             _keyTextBox.IsReadOnly = false;

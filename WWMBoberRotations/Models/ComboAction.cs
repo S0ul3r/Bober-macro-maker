@@ -7,6 +7,7 @@ namespace WWMBoberRotations.Models
     public class ComboAction
     {
         private int _duration;
+        private int _delayAfter;
 
         [JsonConverter(typeof(StringEnumConverter))]
         public ActionType Type { get; set; }
@@ -16,7 +17,13 @@ namespace WWMBoberRotations.Models
         public int Duration 
         { 
             get => _duration;
-            set => _duration = Math.Max(0, value); // Ensure non-negative duration
+            set => _duration = Math.Max(0, value);
+        }
+        
+        public int DelayAfter
+        {
+            get => _delayAfter;
+            set => _delayAfter = Math.Max(0, value);
         }
         
         [JsonConverter(typeof(StringEnumConverter))]
@@ -24,7 +31,7 @@ namespace WWMBoberRotations.Models
 
         public override string ToString()
         {
-            return Type switch
+            var baseText = Type switch
             {
                 ActionType.KeyPress => $"Press: {Key}",
                 ActionType.KeyHold => $"Hold: {Key} for {Duration}ms",
@@ -37,6 +44,13 @@ namespace WWMBoberRotations.Models
                 ActionType.Delay => $"Delay: {Duration}ms",
                 _ => "Unknown Action"
             };
+            
+            if (DelayAfter > 0 && Type != ActionType.Delay)
+            {
+                baseText += $", delay {DelayAfter}ms";
+            }
+            
+            return baseText;
         }
     }
 }

@@ -21,7 +21,6 @@ namespace WWMBoberRotations.Services
         private CancellationTokenSource? _mouseMonitoringCts;
         private readonly Dictionary<string, bool> _mouseButtonStates = new();
 
-        // Windows API for global hooks
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
 
@@ -62,7 +61,6 @@ namespace WWMBoberRotations.Services
 
         public void UpdateCombos(IEnumerable<Combo> combos)
         {
-            // Check for duplicate hotkeys
             var hotkeyCombos = combos.Where(c => c.IsEnabled && !string.IsNullOrEmpty(c.Hotkey)).ToList();
             var duplicates = hotkeyCombos
                 .GroupBy(c => c.Hotkey!.ToLower())
@@ -75,18 +73,16 @@ namespace WWMBoberRotations.Services
                 StatusChanged?.Invoke(this, $"Warning: Duplicate hotkeys detected: {string.Join(", ", duplicates)}");
             }
 
-            // Clear and rebuild combo dictionary
             _combos.Clear();
             foreach (var combo in hotkeyCombos)
             {
                 var hotkeyLower = combo.Hotkey!.ToLower();
-                if (!_combos.ContainsKey(hotkeyLower)) // Only add first combo with this hotkey
+                if (!_combos.ContainsKey(hotkeyLower))
                 {
                     _combos[hotkeyLower] = combo;
                 }
             }
 
-            // Re-register hotkeys if system is active
             if (_isActive)
             {
                 RegisterAllHotkeys();
@@ -127,8 +123,6 @@ namespace WWMBoberRotations.Services
             {
                 var hotkey = kvp.Key;
                 
-                // Skip mouse buttons - they cannot be registered as global hotkeys
-                // They will be handled through GetAsyncKeyState monitoring
                 if (KeyMapper.IsMouseButton(hotkey))
                 {
                     continue;
@@ -146,7 +140,6 @@ namespace WWMBoberRotations.Services
                 }
             }
 
-            // Start monitoring mouse buttons if any combo uses them
             if (_combos.Keys.Any(k => KeyMapper.IsMouseButton(k)))
             {
                 StartMouseButtonMonitoring();
@@ -199,11 +192,14 @@ namespace WWMBoberRotations.Services
                     
                     if (panicKeyCode != 0 && (GetAsyncKeyState(panicKeyCode) & 0x8000) != 0)
                     {
-                        if (_executor.IsExecuting)
+                        if (!_executor.InputSimulator.IsSimulatingInput(panicKeyCode))
                         {
-                            _executor.Stop();
-                            StatusChanged?.Invoke(this, "Combo cancelled (panic button)");
-                            await Task.Delay(PANIC_BUTTON_DEBOUNCE, cancellationToken);
+                            if (_executor.IsExecuting)
+                            {
+                                _executor.Stop();
+                                StatusChanged?.Invoke(this, "Combo cancelled (panic button)");
+                                await Task.Delay(PANIC_BUTTON_DEBOUNCE, cancellationToken);
+                            }
                         }
                     }
                     
@@ -212,7 +208,6 @@ namespace WWMBoberRotations.Services
             }
             catch (OperationCanceledException)
             {
-                // Expected when cancellation is requested
             }
         }
 
@@ -255,7 +250,6 @@ namespace WWMBoberRotations.Services
                             var isPressed = (GetAsyncKeyState(mouseCode) & 0x8000) != 0;
                             var wasPressed = _mouseButtonStates.GetValueOrDefault(hotkey, false);
 
-                            // Detect rising edge (button just pressed)
                             if (isPressed && !wasPressed && !_executor.IsExecuting)
                             {
                                 _ = _executor.ExecuteComboAsync(combo);
@@ -265,12 +259,11 @@ namespace WWMBoberRotations.Services
                         }
                     }
 
-                    await Task.Delay(50, cancellationToken); // Check every 50ms
+                    await Task.Delay(50, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
             {
-                // Expected when cancellation is requested
             }
         }
 

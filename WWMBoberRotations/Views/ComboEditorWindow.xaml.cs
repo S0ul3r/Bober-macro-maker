@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using WWMBoberRotations.Models;
+using WWMBoberRotations.Services;
 using WWMBoberRotations.ViewModels;
 
 namespace WWMBoberRotations.Views
@@ -56,7 +57,6 @@ namespace WWMBoberRotations.Views
 
                 var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
-                // ESC clears the hotkey
                 if (key == Key.Escape)
                 {
                     _viewModel.Hotkey = null;
@@ -64,7 +64,6 @@ namespace WWMBoberRotations.Views
                     return;
                 }
 
-                // Ignore modifier keys by themselves
                 if (key == Key.LeftShift || key == Key.RightShift ||
                     key == Key.LeftCtrl || key == Key.RightCtrl ||
                     key == Key.LeftAlt || key == Key.RightAlt ||
@@ -73,7 +72,7 @@ namespace WWMBoberRotations.Views
                     return;
                 }
 
-                _viewModel.Hotkey = KeyToString(key);
+                _viewModel.Hotkey = KeyMapper.WpfKeyToString(key);
                 _isWaitingForHotkey = false;
             }
         }
@@ -104,7 +103,6 @@ namespace WWMBoberRotations.Views
             }
         }
 
-        // Drag & Drop implementation
         private void ActionsListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = e.GetPosition(null);
@@ -115,8 +113,6 @@ namespace WWMBoberRotations.Views
             {
                 _draggedItem = item;
             }
-            
-            // Don't handle the event - let ListBox handle selection
         }
 
         private void ActionsListBox_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -139,7 +135,6 @@ namespace WWMBoberRotations.Views
 
         private void ActionsListBox_Drop(object sender, DragEventArgs e)
         {
-            // Hide drop indicator
             DropIndicator.Visibility = Visibility.Collapsed;
             
             if (e.Data.GetData(typeof(ComboAction)) is ComboAction droppedAction)
@@ -172,16 +167,10 @@ namespace WWMBoberRotations.Views
                         var position = e.GetPosition(ActionsListBox);
                         var containerPosition = container.TranslatePoint(new Point(0, 0), ActionsListBox);
                         var containerHeight = container.ActualHeight;
-                        
-                        // Show line above or below depending on mouse position
                         var relativeY = position.Y - containerPosition.Y;
                         var insertBefore = relativeY < containerHeight / 2;
-                        
-                        // Calculate Y position for the line - add offset to position between elements
                         var lineY = containerPosition.Y + (insertBefore ? 9 : containerHeight + 9);
-                        
-                        // Set the width to match the ListBox content width (excluding scrollbar)
-                        var listBoxWidth = ActionsListBox.ActualWidth - SystemParameters.VerticalScrollBarWidth - 20; // 20 for margins
+                        var listBoxWidth = ActionsListBox.ActualWidth - SystemParameters.VerticalScrollBarWidth - 20;
                         
                         DropIndicator.Visibility = Visibility.Visible;
                         DropIndicator.Width = listBoxWidth;
@@ -237,37 +226,17 @@ namespace WWMBoberRotations.Views
             Close();
         }
 
-        private string KeyToString(Key key)
+        private void ActionsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            return key switch
+            var item = GetItemAtPosition(e.GetPosition(ActionsListBox));
+            if (item != null)
             {
-                Key.Space => "space",
-                Key.Enter or Key.Return => "enter",
-                Key.Tab => "tab",
-                Key.LeftShift or Key.RightShift => "shift",
-                Key.LeftCtrl or Key.RightCtrl => "ctrl",
-                Key.LeftAlt or Key.RightAlt => "alt",
-                Key.Escape => "esc",
-                Key.Up => "up",
-                Key.Down => "down",
-                Key.Left => "left",
-                Key.Right => "right",
-                Key.F1 => "f1",
-                Key.F2 => "f2",
-                Key.F3 => "f3",
-                Key.F4 => "f4",
-                Key.F5 => "f5",
-                Key.F6 => "f6",
-                Key.F7 => "f7",
-                Key.F8 => "f8",
-                Key.F9 => "f9",
-                Key.F10 => "f10",
-                Key.F11 => "f11",
-                Key.F12 => "f12",
-                >= Key.D0 and <= Key.D9 => ((char)('0' + (key - Key.D0))).ToString(),
-                >= Key.A and <= Key.Z => ((char)('a' + (key - Key.A))).ToString(),
-                _ => key.ToString().ToLower()
-            };
+                _viewModel.SelectedAction = item;
+                if (_viewModel.EditActionCommand.CanExecute(null))
+                {
+                    _viewModel.EditActionCommand.Execute(null);
+                }
+            }
         }
     }
 }

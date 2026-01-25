@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +9,8 @@ namespace WWMBoberRotations.Services
 {
     public class InputSimulatorService
     {
-        // SendInput structures
+        private readonly ConcurrentDictionary<int, DateTime> _simulatedInputs = new();
+        private const int SIMULATION_TIMEOUT_MS = 100;
         [StructLayout(LayoutKind.Sequential)]
         private struct INPUT
         {
@@ -46,7 +48,6 @@ namespace WWMBoberRotations.Services
             public IntPtr dwExtraInfo;
         }
 
-        // Windows API
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
@@ -68,16 +69,33 @@ namespace WWMBoberRotations.Services
         private const uint MOUSEEVENTF_XUP = 0x0100;
         private const uint XBUTTON1 = 0x0001;
         private const uint XBUTTON2 = 0x0002;
-        private const int MOUSE_CLICK_DELAY = 50;
-        private const int KEY_PRESS_DELAY = 50;
-        private const int KEY_RELEASE_DELAY = 30;
+        
+        private const int MOUSE_CLICK_DELAY = 20;
+        private const int KEY_PRESS_DELAY = 20;
+
+        public bool IsSimulatingInput(int keyCode)
+        {
+            if (_simulatedInputs.TryGetValue(keyCode, out var timestamp))
+            {
+                var elapsed = (DateTime.UtcNow - timestamp).TotalMilliseconds;
+                if (elapsed < SIMULATION_TIMEOUT_MS)
+                {
+                    return true;
+                }
+                else
+                {
+                    _simulatedInputs.TryRemove(keyCode, out _);
+                }
+            }
+            return false;
+        }
 
         public async Task ExecuteActionAsync(ComboAction action, CancellationToken cancellationToken)
         {
             switch (action.Type)
             {
                 case ActionType.KeyPress:
-                    PressKeyOrMouseButton(action.Key!);
+                    await PressKeyOrMouseButtonAsync(action.Key!, cancellationToken);
                     break;
 
                 case ActionType.KeyHold:
@@ -85,7 +103,7 @@ namespace WWMBoberRotations.Services
                     break;
 
                 case ActionType.MouseClick:
-                    ClickMouse(action.Button);
+                    await ClickMouseAsync(action.Button, cancellationToken);
                     break;
 
                 case ActionType.Delay:
@@ -94,115 +112,20 @@ namespace WWMBoberRotations.Services
             }
         }
 
-        private void PressKeyOrMouseButton(string key)
+        private async Task PressKeyOrMouseButtonAsync(string key, CancellationToken cancellationToken)
         {
-            // Check if it's a mouse button first
             if (KeyMapper.IsMouseButton(key))
             {
-                ExecuteMouseButtonClick(key);
+                await ExecuteMouseButtonClickAsync(key, cancellationToken);
                 return;
             }
             
-            // Otherwise treat it as a keyboard key - use SendInput with SCAN CODES
             var virtualKey = KeyMapper.GetVirtualKeyCode(key);
             ushort vkCode = (ushort)virtualKey;
             ushort scanCode = (ushort)MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
             
-            // Create key down input with SCANCODE flag
-            var inputDown = new INPUT
-            {
-                Type = INPUT_KEYBOARD,
-                Data = new INPUTUNION
-                {
-                    Keyboard = new KEYBDINPUT
-                    {
-                        wVk = 0,  // Set to 0 when using scan code
-                        wScan = scanCode,
-                        dwFlags = KEYEVENTF_SCANCODE,  // Use scan code instead of virtual key
-                        time = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Create key up input with SCANCODE flag
-            var inputUp = new INPUT
-            {
-                Type = INPUT_KEYBOARD,
-                Data = new INPUTUNION
-                {
-                    Keyboard = new KEYBDINPUT
-                    {
-                        wVk = 0,  // Set to 0 when using scan code
-                        wScan = scanCode,
-                        dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,  // Scan code + key up
-                        time = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Send key down
-            SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
-            Thread.Sleep(KEY_PRESS_DELAY);
-
-            // Send key up
-            SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
-            Thread.Sleep(KEY_RELEASE_DELAY);
-        }
-
-        private void ExecuteMouseButtonClick(string mouseButton)
-        {
-            var lowerButton = mouseButton.ToLower();
+            _simulatedInputs[vkCode] = DateTime.UtcNow;
             
-            switch (lowerButton)
-            {
-                case "lmb":
-                case "leftclick":
-                case "leftmouse":
-                    mouse_event(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
-                    Thread.Sleep(MOUSE_CLICK_DELAY);
-                    mouse_event(0x0004, 0, 0, 0, 0); // MOUSEEVENTF_LEFTUP
-                    Thread.Sleep(30);
-                    break;
-                    
-                case "rmb":
-                case "rightclick":
-                case "rightmouse":
-                    mouse_event(0x0008, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTDOWN
-                    Thread.Sleep(MOUSE_CLICK_DELAY);
-                    mouse_event(0x0010, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTUP
-                    Thread.Sleep(30);
-                    break;
-                    
-                case "mmb":
-                case "middleclick":
-                case "middlemouse":
-                    ClickMiddleButton();
-                    Thread.Sleep(30);
-                    break;
-                    
-                case "mouse4":
-                case "xbutton1":
-                    ClickXButton(XBUTTON1);
-                    Thread.Sleep(30);
-                    break;
-                    
-                case "mouse5":
-                case "xbutton2":
-                    ClickXButton(XBUTTON2);
-                    Thread.Sleep(30);
-                    break;
-            }
-        }
-
-        private async Task HoldKeyAsync(string key, int duration, CancellationToken cancellationToken)
-        {
-            var virtualKey = KeyMapper.GetVirtualKeyCode(key);
-            ushort vkCode = (ushort)virtualKey;
-            ushort scanCode = (ushort)MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
-            
-            // Create key down input with SCANCODE
             var inputDown = new INPUT
             {
                 Type = INPUT_KEYBOARD,
@@ -219,7 +142,102 @@ namespace WWMBoberRotations.Services
                 }
             };
 
-            // Send key down
+            var inputUp = new INPUT
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new INPUTUNION
+                {
+                    Keyboard = new KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
+            await Task.Delay(KEY_PRESS_DELAY, cancellationToken);
+            SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
+        }
+
+        private async Task ExecuteMouseButtonClickAsync(string mouseButton, CancellationToken cancellationToken)
+        {
+            var lowerButton = mouseButton.ToLower();
+            int mouseCode = 0;
+            
+            switch (lowerButton)
+            {
+                case "lmb":
+                case "leftclick":
+                case "leftmouse":
+                    mouseCode = 0x01;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    mouse_event(0x0002, 0, 0, 0, 0);
+                    await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
+                    mouse_event(0x0004, 0, 0, 0, 0);
+                    break;
+                    
+                case "rmb":
+                case "rightclick":
+                case "rightmouse":
+                    mouseCode = 0x02;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    mouse_event(0x0008, 0, 0, 0, 0);
+                    await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
+                    mouse_event(0x0010, 0, 0, 0, 0);
+                    break;
+                    
+                case "mmb":
+                case "middleclick":
+                case "middlemouse":
+                    mouseCode = 0x04;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickMiddleButtonAsync(cancellationToken);
+                    break;
+                    
+                case "mouse4":
+                case "xbutton1":
+                    mouseCode = 0x05;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickXButtonAsync(XBUTTON1, cancellationToken);
+                    break;
+                    
+                case "mouse5":
+                case "xbutton2":
+                    mouseCode = 0x06;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickXButtonAsync(XBUTTON2, cancellationToken);
+                    break;
+            }
+        }
+
+        private async Task HoldKeyAsync(string key, int duration, CancellationToken cancellationToken)
+        {
+            var virtualKey = KeyMapper.GetVirtualKeyCode(key);
+            ushort vkCode = (ushort)virtualKey;
+            ushort scanCode = (ushort)MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
+            
+            _simulatedInputs[vkCode] = DateTime.UtcNow;
+            
+            var inputDown = new INPUT
+            {
+                Type = INPUT_KEYBOARD,
+                Data = new INPUTUNION
+                {
+                    Keyboard = new KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
             SendInput(1, new[] { inputDown }, Marshal.SizeOf(typeof(INPUT)));
             
             try
@@ -228,7 +246,6 @@ namespace WWMBoberRotations.Services
             }
             finally
             {
-                // Create key up input with SCANCODE
                 var inputUp = new INPUT
                 {
                     Type = INPUT_KEYBOARD,
@@ -245,54 +262,63 @@ namespace WWMBoberRotations.Services
                     }
                 };
 
-                // Send key up
                 SendInput(1, new[] { inputUp }, Marshal.SizeOf(typeof(INPUT)));
             }
         }
 
-        private void ClickMouse(Models.MouseButton button)
+        private async Task ClickMouseAsync(Models.MouseButton button, CancellationToken cancellationToken)
         {
+            int mouseCode = 0;
             switch (button)
             {
                 case Models.MouseButton.Left:
-                    mouse_event(0x0002, 0, 0, 0, 0); // MOUSEEVENTF_LEFTDOWN
-                    Thread.Sleep(MOUSE_CLICK_DELAY);
-                    mouse_event(0x0004, 0, 0, 0, 0); // MOUSEEVENTF_LEFTUP
+                    mouseCode = 0x01;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    mouse_event(0x0002, 0, 0, 0, 0);
+                    await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
+                    mouse_event(0x0004, 0, 0, 0, 0);
                     break;
                 case Models.MouseButton.Right:
-                    mouse_event(0x0008, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTDOWN
-                    Thread.Sleep(MOUSE_CLICK_DELAY);
-                    mouse_event(0x0010, 0, 0, 0, 0); // MOUSEEVENTF_RIGHTUP
+                    mouseCode = 0x02;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    mouse_event(0x0008, 0, 0, 0, 0);
+                    await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
+                    mouse_event(0x0010, 0, 0, 0, 0);
                     break;
                 case Models.MouseButton.Middle:
-                    ClickMiddleButton();
+                    mouseCode = 0x04;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickMiddleButtonAsync(cancellationToken);
                     break;
                 case Models.MouseButton.XButton1:
-                    ClickXButton(XBUTTON1);
+                    mouseCode = 0x05;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickXButtonAsync(XBUTTON1, cancellationToken);
                     break;
                 case Models.MouseButton.XButton2:
-                    ClickXButton(XBUTTON2);
+                    mouseCode = 0x06;
+                    _simulatedInputs[mouseCode] = DateTime.UtcNow;
+                    await ClickXButtonAsync(XBUTTON2, cancellationToken);
                     break;
             }
         }
 
-        private void ClickMiddleButton()
+        private async Task ClickMiddleButtonAsync(CancellationToken cancellationToken)
         {
             mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, 0);
-            Thread.Sleep(MOUSE_CLICK_DELAY);
+            await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
             mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, 0);
         }
 
-        private void ClickXButton(uint button)
+        private async Task ClickXButtonAsync(uint button, CancellationToken cancellationToken)
         {
             mouse_event(MOUSEEVENTF_XDOWN, 0, 0, button, 0);
-            Thread.Sleep(MOUSE_CLICK_DELAY);
+            await Task.Delay(MOUSE_CLICK_DELAY, cancellationToken);
             mouse_event(MOUSEEVENTF_XUP, 0, 0, button, 0);
         }
 
         private static async Task DelayAsync(int duration, CancellationToken cancellationToken)
         {
-            // Break delay into smaller chunks for better responsiveness
             const int chunkSize = 100;
             var remaining = duration;
 

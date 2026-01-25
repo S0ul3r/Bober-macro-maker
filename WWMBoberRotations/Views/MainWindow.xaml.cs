@@ -19,7 +19,6 @@ namespace WWMBoberRotations.Views
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
 
-            // Subscribe to system active changes to update button appearance
             _viewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(MainViewModel.IsSystemActive))
@@ -34,18 +33,15 @@ namespace WWMBoberRotations.Views
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Initialize hotkey manager with window handle
             var helper = new WindowInteropHelper(this);
             _viewModel.InitializeHotkeyManager(helper.Handle);
-
-            // Hook into Windows message loop for hotkey handling
             var source = HwndSource.FromHwnd(helper.Handle);
             source?.AddHook(WndProc);
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            _viewModel.Cleanup();
+            _viewModel.Dispose();
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -85,7 +81,7 @@ namespace WWMBoberRotations.Views
                             }
                         }
                     };
-                    StartStopButton.Background = new SolidColorBrush(Color.FromRgb(211, 47, 47)); // Red
+                    StartStopButton.Background = new SolidColorBrush(Color.FromRgb(211, 47, 47));
                 }
                 else
                 {
@@ -109,7 +105,7 @@ namespace WWMBoberRotations.Views
                             }
                         }
                     };
-                    StartStopButton.ClearValue(BackgroundProperty); // Reset to default
+                    StartStopButton.ClearValue(BackgroundProperty);
                 }
             });
         }
@@ -139,6 +135,14 @@ namespace WWMBoberRotations.Views
                     _ => "unknown"
                 };
                 _viewModel.OnKeyPressed(buttonName);
+            }
+        }
+
+        private void CombosListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (_viewModel.SelectedCombo != null && _viewModel.EditComboCommand.CanExecute(null))
+            {
+                _viewModel.EditComboCommand.Execute(null);
             }
         }
     }

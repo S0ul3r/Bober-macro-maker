@@ -4,8 +4,8 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="WWM Bober Rotations" 
         Icon="/Assets/app_icon.png"
-        Height="700" Width="900"
-        MinHeight="600" MinWidth="800"
+        Height="800" Width="1000"
+        MinHeight="700" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -81,11 +81,13 @@
                                FontWeight="Bold"
                                Margin="15,15,15,10"/>
 
-                    <ListBox Grid.Row="1" 
+                    <ListBox x:Name="CombosListBox"
+                             Grid.Row="1" 
                              ItemsSource="{Binding Combos}"
                              SelectedItem="{Binding SelectedCombo}"
                              Margin="10"
-                             SelectionMode="Single">
+                             SelectionMode="Single"
+                             MouseDoubleClick="CombosListBox_MouseDoubleClick">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
                                 <Setter Property="Padding" Value="8,4"/>
@@ -118,6 +120,13 @@
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="RecordCircle" Margin="0,0,5,0"/>
                                 <TextBlock Text="Record Macro"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <Button Command="{Binding DuplicateComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ContentCopy" Margin="0,0,5,0"/>
+                                <TextBlock Text="Duplicate"/>
                             </StackPanel>
                         </Button>
                         

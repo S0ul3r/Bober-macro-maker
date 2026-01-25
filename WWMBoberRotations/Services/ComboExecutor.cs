@@ -14,6 +14,7 @@ namespace WWMBoberRotations.Services
         public event EventHandler<string>? StatusChanged;
 
         public bool IsExecuting => _isExecuting;
+        public InputSimulatorService InputSimulator => _inputSimulator;
 
         public ComboExecutor()
         {
@@ -25,7 +26,7 @@ namespace WWMBoberRotations.Services
             if (_isExecuting)
             {
                 Stop();
-                await Task.Delay(100); // Give time for previous execution to stop
+                await Task.Delay(100);
             }
 
             _currentExecutionCts = new CancellationTokenSource();
@@ -41,6 +42,11 @@ namespace WWMBoberRotations.Services
                         break;
 
                     await _inputSimulator.ExecuteActionAsync(action, _currentExecutionCts.Token);
+                    
+                    if (action.DelayAfter > 0 && !_currentExecutionCts.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(action.DelayAfter, _currentExecutionCts.Token);
+                    }
                 }
 
                 StatusChanged?.Invoke(this, "Combo completed");

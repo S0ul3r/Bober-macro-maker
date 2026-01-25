@@ -128,6 +128,21 @@ namespace WWMBoberRotations.ViewModels
             return SelectedAction != null && Actions.IndexOf(SelectedAction) < Actions.Count - 1;
         }
 
-        public Combo GetCombo() => _combo;
+        public Combo GetCombo()
+        {
+            var result = new Combo
+            {
+                Name = _combo.Name,
+                Hotkey = _combo.Hotkey,
+                IsEnabled = _combo.IsEnabled
+            };
+            
+            foreach (var action in _combo.Actions)
+            {
+                result.Actions.Add(action);
+            }
+            
+            return result;
+        }
     }
 }

@@ -9,7 +9,6 @@ namespace WWMBoberRotations
         {
             base.OnStartup(e);
             
-            // Create Data directory if it doesn't exist
             var dataDir = System.IO.Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory, 
                 "Data"

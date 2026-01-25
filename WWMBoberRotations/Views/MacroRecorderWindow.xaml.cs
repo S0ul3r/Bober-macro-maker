@@ -46,8 +46,6 @@ namespace WWMBoberRotations.Views
 
             RecordHotkeyTextBox.Text = RecordHotkey;
             ComboNameTextBox.TextChanged += (s, e) => ComboName = ComboNameTextBox.Text;
-
-            // Start monitoring for record hotkey
             StartRecordHotkeyMonitoring();
         }
 
@@ -61,14 +59,11 @@ namespace WWMBoberRotations.Views
             if (_isWaitingForRecordHotkey)
                 return;
 
-            // Check if record hotkey is pressed
             var keyCode = GetHotkeyCode(RecordHotkey);
             if (keyCode == 0)
                 return;
 
             var isPressed = IsKeyPressed(keyCode);
-
-            // Detect rising edge (key just pressed)
             if (isPressed && !_lastHotkeyState)
             {
                 _ = ToggleRecordingAsync();
@@ -81,19 +76,15 @@ namespace WWMBoberRotations.Views
         {
             if (_recorder.IsRecording)
             {
-                // Stop recording
                 _recorder.StopRecording();
                 UpdateSaveButtonState();
             }
             else
             {
-                // Start recording
                 _displayActions.Clear();
                 ActionCountText.Text = " (0)";
                 _recorder.SetStopHotkey(RecordHotkey);
                 await _recorder.StartRecordingAsync();
-
-                // Recording stopped by hotkey or manual stop
                 UpdateSaveButtonState();
             }
         }
@@ -120,7 +111,6 @@ namespace WWMBoberRotations.Views
                 ActionCountText.Text = $" ({_displayActions.Count})";
                 UpdateButtonStates();
                 
-                // Auto-scroll to bottom
                 if (ActionsListBox.Items.Count > 0)
                 {
                     ActionsListBox.ScrollIntoView(ActionsListBox.Items[ActionsListBox.Items.Count - 1]);
@@ -160,14 +150,12 @@ namespace WWMBoberRotations.Views
 
                 var key = e.Key == Key.System ? e.SystemKey : e.Key;
 
-                // ESC clears the hotkey
                 if (key == Key.Escape)
                 {
                     ClearRecordHotkey_Click(this, new RoutedEventArgs());
                     return;
                 }
 
-                // Ignore modifier keys
                 if (key == Key.LeftShift || key == Key.RightShift ||
                     key == Key.LeftCtrl || key == Key.RightCtrl ||
                     key == Key.LeftAlt || key == Key.RightAlt ||
@@ -319,14 +307,11 @@ namespace WWMBoberRotations.Views
             _dragStartPoint = e.GetPosition(null);
             _isDragging = false;
             
-            // Get the item being clicked
             var item = GetItemAtPosition(e.GetPosition(ActionsListBox));
             if (item != null)
             {
                 _draggedItem = item;
             }
-            
-            // Don't handle the event - let ListBox handle selection
         }
 
         private void ActionsListBox_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -336,7 +321,6 @@ namespace WWMBoberRotations.Views
                 Point currentPosition = e.GetPosition(null);
                 Vector diff = _dragStartPoint - currentPosition;
 
-                // Only start drag if moved beyond threshold
                 if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
                     Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
                 {
@@ -350,7 +334,6 @@ namespace WWMBoberRotations.Views
 
         private void ActionsListBox_Drop(object sender, DragEventArgs e)
         {
-            // Hide drop indicator
             DropIndicator.Visibility = Visibility.Collapsed;
             
             if (e.Data.GetDataPresent(typeof(ActionDisplayItem)))
@@ -365,17 +348,14 @@ namespace WWMBoberRotations.Views
 
                     if (oldIndex >= 0 && newIndex >= 0)
                     {
-                        // Move in display collection
                         _displayActions.Move(oldIndex, newIndex);
                         
-                        // Move in recorder's internal list
                         var actions = _recorder.GetRecordedActions();
                         if (oldIndex < actions.Count && newIndex < actions.Count)
                         {
                             var action = actions[oldIndex];
                             _recorder.RemoveActionAt(oldIndex);
                             
-                            // Adjust index if moving down
                             if (newIndex > oldIndex)
                                 newIndex--;
                             
@@ -399,16 +379,10 @@ namespace WWMBoberRotations.Views
                         var position = e.GetPosition(ActionsListBox);
                         var containerPosition = container.TranslatePoint(new Point(0, 0), ActionsListBox);
                         var containerHeight = container.ActualHeight;
-                        
-                        // Show line above or below depending on mouse position
                         var relativeY = position.Y - containerPosition.Y;
                         var insertBefore = relativeY < containerHeight / 2;
-                        
-                        // Calculate Y position for the line - add offset to position between elements
                         var lineY = containerPosition.Y + (insertBefore ? 9 : containerHeight + 9);
-                        
-                        // Set the width to match the ListBox content width (excluding scrollbar)
-                        var listBoxWidth = ActionsListBox.ActualWidth - SystemParameters.VerticalScrollBarWidth - 30; // 30 for margins
+                        var listBoxWidth = ActionsListBox.ActualWidth - SystemParameters.VerticalScrollBarWidth - 30;
                         
                         DropIndicator.Visibility = Visibility.Visible;
                         DropIndicator.Width = listBoxWidth;
@@ -456,7 +430,7 @@ namespace WWMBoberRotations.Views
             public ActionDisplayItem(ComboAction action)
             {
                 Type = action.Type;
-                Description = action.Type switch
+                var baseDescription = action.Type switch
                 {
                     ActionType.KeyPress => $"- Press '{action.Key}'",
                     ActionType.Delay => $"- Wait {action.Duration}ms",
@@ -464,6 +438,15 @@ namespace WWMBoberRotations.Views
                     ActionType.MouseClick => $"- Click {action.Button}",
                     _ => ""
                 };
+                
+                if (action.DelayAfter > 0 && action.Type != ActionType.Delay)
+                {
+                    Description = $"{baseDescription}, delay {action.DelayAfter}ms";
+                }
+                else
+                {
+                    Description = baseDescription;
+                }
             }
         }
     }

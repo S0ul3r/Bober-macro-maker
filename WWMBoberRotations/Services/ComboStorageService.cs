@@ -19,7 +19,6 @@ namespace WWMBoberRotations.Services
             _dataFilePath = Path.Combine(_dataDir, "combos.json");
             _autoSaveFilePath = Path.Combine(_dataDir, ".autosave.json");
             
-            // Ensure data directory exists
             if (!Directory.Exists(_dataDir))
                 Directory.CreateDirectory(_dataDir);
         }
@@ -37,7 +36,7 @@ namespace WWMBoberRotations.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading combos: {ex.Message}");
+                Logger.Error("Failed to load combos", ex);
                 return new List<Combo>();
             }
         }
@@ -48,18 +47,15 @@ namespace WWMBoberRotations.Services
             {
                 var json = JsonConvert.SerializeObject(combos, Formatting.Indented);
                 
-                // Ensure directory exists
                 if (!Directory.Exists(_dataDir))
                     Directory.CreateDirectory(_dataDir);
                     
                 File.WriteAllText(_dataFilePath, json);
-                
-                // Delete autosave after successful save
                 DeleteAutoSave();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving combos: {ex.Message}");
+                Logger.Error("Failed to save combos", ex);
                 throw;
             }
         }
@@ -73,8 +69,7 @@ namespace WWMBoberRotations.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error auto-saving combos: {ex.Message}");
-                // Don't throw - autosave failures shouldn't crash the app
+                Logger.Warning($"Auto-save failed: {ex.Message}");
             }
         }
 
@@ -104,7 +99,7 @@ namespace WWMBoberRotations.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading autosave: {ex.Message}");
+                Logger.Error("Failed to load autosave", ex);
                 return new List<Combo>();
             }
         }
@@ -118,7 +113,7 @@ namespace WWMBoberRotations.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting autosave: {ex.Message}");
+                Logger.Warning($"Failed to delete autosave: {ex.Message}");
             }
         }
 

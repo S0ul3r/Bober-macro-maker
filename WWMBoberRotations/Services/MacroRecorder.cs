@@ -14,8 +14,9 @@ namespace WWMBoberRotations.Services
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
 
-        private const int KEY_POLL_INTERVAL = 10; // Poll every 10ms for responsive detection
-        private const int MIN_DELAY_TO_RECORD = 50; // Minimum delay to record (avoid spam)
+        private const int KEY_POLL_INTERVAL = 10;
+        private const int MIN_DELAY_TO_RECORD = 10;
+        private const int EXECUTION_KEY_PRESS_DELAY = 20;
         
         private readonly List<ComboAction> _recordedActions = new();
         private readonly HashSet<int> _pressedKeys = new();
@@ -65,21 +66,20 @@ namespace WWMBoberRotations.Services
 
         private void RecordingLoop(CancellationToken cancellationToken)
         {
-            var lastActionTime = 0L;
+            var lastActionPressTime = 0L;
 
             try
             {
                 while (!cancellationToken.IsCancellationRequested && _isRecording)
                 {
-                    // Check all possible keys (but NOT the stop hotkey - it's handled by the window)
-                    CheckAndRecordKeys(ref lastActionTime);
-                    CheckAndRecordMouseButtons(ref lastActionTime);
-
+                    CheckAndRecordKeys(ref lastActionPressTime);
+                    CheckAndRecordMouseButtons(ref lastActionPressTime);
                     Thread.Sleep(KEY_POLL_INTERVAL);
                 }
             }
             catch (Exception ex)
             {
+                Logger.Error("Recording loop error", ex);
                 StatusChanged?.Invoke(this, $"Recording error: {ex.Message}");
                 StopRecording();
             }
@@ -87,19 +87,16 @@ namespace WWMBoberRotations.Services
 
         private void CheckAndRecordKeys(ref long lastActionTime)
         {
-            // Check A-Z
             for (int i = 0x41; i <= 0x5A; i++)
             {
                 CheckKey(i, ((char)i).ToString().ToLower(), ref lastActionTime);
             }
 
-            // Check 0-9
             for (int i = 0x30; i <= 0x39; i++)
             {
                 CheckKey(i, ((char)i).ToString(), ref lastActionTime);
             }
 
-            // Check special keys
             var specialKeys = new Dictionary<int, string>
             {
                 [0x20] = "space",
@@ -135,69 +132,49 @@ namespace WWMBoberRotations.Services
 
         private void CheckAndRecordMouseButtons(ref long lastActionTime)
         {
-            var mouseButtons = new Dictionary<int, string>
-            {
-                [0x01] = "lmb",
-                [0x02] = "rmb",
-                [0x04] = "mmb",
-                [0x05] = "mouse4",
-                [0x06] = "mouse5",
-            };
-
+            var mouseButtons = KeyMapper.GetAllMouseButtonCodes();
             foreach (var kvp in mouseButtons)
             {
                 CheckKey(kvp.Key, kvp.Value, ref lastActionTime);
             }
         }
 
-        private void CheckKey(int keyCode, string keyName, ref long lastActionTime)
+        private void CheckKey(int keyCode, string keyName, ref long lastActionPressTime)
         {
-            // Skip the stop hotkey - don't record it
             var stopKeyCode = GetStopHotkeyCode();
             if (keyCode == stopKeyCode)
                 return;
 
             var isPressed = IsKeyPressed(keyCode);
 
-            // Detect key press (rising edge)
             if (isPressed && !_pressedKeys.Contains(keyCode))
             {
                 _pressedKeys.Add(keyCode);
+                var currentTime = _timingSw?.ElapsedMilliseconds ?? 0;
 
-                // Add delay if this is not the first action
-                if (_recordedActions.Count > 0 && _timingSw != null)
+                if (_recordedActions.Count > 0 && lastActionPressTime > 0)
                 {
-                    var currentTime = _timingSw.ElapsedMilliseconds;
-                    var delay = (int)(currentTime - lastActionTime);
+                    var rawDelay = (int)(currentTime - lastActionPressTime);
+                    var compensatedDelay = Math.Max(0, rawDelay - EXECUTION_KEY_PRESS_DELAY);
 
-                    if (delay >= MIN_DELAY_TO_RECORD)
+                    if (compensatedDelay >= MIN_DELAY_TO_RECORD || rawDelay >= MIN_DELAY_TO_RECORD)
                     {
-                        var delayAction = new ComboAction
-                        {
-                            Type = ActionType.Delay,
-                            Duration = delay
-                        };
-                        _recordedActions.Add(delayAction);
-                        ActionRecorded?.Invoke(this, delayAction);
+                        var lastAction = _recordedActions[_recordedActions.Count - 1];
+                        lastAction.DelayAfter = compensatedDelay;
                     }
-
-                    lastActionTime = currentTime;
-                }
-                else if (_timingSw != null)
-                {
-                    lastActionTime = _timingSw.ElapsedMilliseconds;
                 }
 
-                // Add key press action
+                lastActionPressTime = currentTime;
+
                 var keyAction = new ComboAction
                 {
                     Type = ActionType.KeyPress,
-                    Key = keyName
+                    Key = keyName,
+                    DelayAfter = 0
                 };
                 _recordedActions.Add(keyAction);
                 ActionRecorded?.Invoke(this, keyAction);
             }
-            // Detect key release (falling edge)
             else if (!isPressed && _pressedKeys.Contains(keyCode))
             {
                 _pressedKeys.Remove(keyCode);

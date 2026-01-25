@@ -13,7 +13,7 @@ namespace WWMBoberRotations.Models
         Left,
         Right,
         Middle,
-        XButton1,  // Mouse 4
-        XButton2   // Mouse 5
+        XButton1,
+        XButton2
     }
 }
