@@ -22,8 +22,11 @@ WWM Bober Rotations is a safe, external macro automation tool that helps you exe
 - **Hotkey Activation** - Trigger combos with any keyboard key or mouse button
 - **Panic Button** - Instant emergency stop (configurable, default: Right Mouse Button)
 - **Auto-Save** - Automatic backup every 30 seconds with crash recovery
-- **Precise Timing** - Millisecond-accurate delays and holds
+- **Precise Timing** - Millisecond-accurate delays and holds with per-action delay control
 - **Drag-and-Drop Reordering** - Easily rearrange actions in combos
+- **Duplicate Combo** - Quickly copy existing combos with all actions
+- **Double-Click Editing** - Fast access to edit combos and actions
+- **Mouse Button Support** - Use mouse buttons (LMB, RMB, Mouse4, Mouse5) in all action types
 - **Beautiful Material Design UI** - Modern, professional dark theme interface
 - **Import/Export** - Share combos with friends
 - **100% Safe** - No injection, no memory reading, completely external
@@ -55,11 +58,18 @@ WWMBoberRotations.exe
 1. Launch the application
 2. Click "New Combo"
 3. Enter a name (e.g., "Basic Attack")
-4. Click in the Hotkey field and press a key (e.g., "1")
+4. Click "Set Hotkey" and press a key or mouse button (e.g., "1" or "LMB")
 5. Click "Add Action" to add actions
-6. Click "Save Combo"
-7. Click "START MACRO SYSTEM" (button turns red)
-8. Press your hotkey in-game
+6. For each action, set the delay after execution (optional)
+7. Click "Save Combo"
+8. Click "START MACRO SYSTEM" (button turns red)
+9. Press your hotkey in-game
+
+**Tips:**
+- Double-click any combo in the list to quickly edit it
+- Double-click any action in the combo editor to edit it
+- Use "Duplicate Combo" to copy an existing combo and modify it
+- Mouse buttons can be used as hotkeys and in all action types
 
 ## Action Types
 
@@ -69,6 +79,8 @@ WWMBoberRotations.exe
 | **Key Hold** | Hold a key for specified duration | Charged attacks (Hold Space 1.5s) |
 | **Mouse Click** | Click left/right/middle/mouse4/mouse5 button | Attack combos |
 | **Delay** | Wait for specified time | Cooldown timing (Wait 500ms) |
+
+**Note:** Each action now includes a "Delay After" field, allowing you to set a delay directly on the action instead of creating separate Delay actions. This makes combo creation faster and more intuitive.
 
 ## Supported Keys
 
