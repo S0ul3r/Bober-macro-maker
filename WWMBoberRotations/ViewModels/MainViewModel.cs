@@ -154,9 +154,11 @@ namespace WWMBoberRotations.ViewModels
             if (SelectedCombo == null) return;
 
             var editor = new ComboEditorWindow(SelectedCombo);
-            if (editor.ShowDialog() == true)
+            if (editor.ShowDialog() == true && editor.Result != null)
             {
+                UpdateComboFromEditorResult(SelectedCombo, editor.Result);
                 MarkAsChanged();
+                RefreshComboInList(SelectedCombo);
             }
         }
 

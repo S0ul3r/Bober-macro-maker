@@ -419,5 +419,32 @@ namespace WWMBoberRotations.Views
 
             e.Handled = true;
         }
+
+        protected override void OnPreviewMouseDown(System.Windows.Input.MouseButtonEventArgs e)
+        {
+            base.OnPreviewMouseDown(e);
+
+            if (_keyTextBox?.IsReadOnly == true)
+            {
+                e.Handled = true;
+
+                var mouseButton = e.ChangedButton switch
+                {
+                    System.Windows.Input.MouseButton.Left => "lmb",
+                    System.Windows.Input.MouseButton.Right => "rmb",
+                    System.Windows.Input.MouseButton.Middle => "mmb",
+                    System.Windows.Input.MouseButton.XButton1 => "mouse4",
+                    System.Windows.Input.MouseButton.XButton2 => "mouse5",
+                    _ => null
+                };
+
+                if (mouseButton != null)
+                {
+                    PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
+                    _keyTextBox.Text = mouseButton;
+                    _keyTextBox.IsReadOnly = false;
+                }
+            }
+        }
     }
 }
