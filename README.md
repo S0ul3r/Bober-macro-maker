@@ -2,8 +2,7 @@
 
 **Macro automation tool for "Where Winds Meet"** — safe, external, no injection or memory reading.
 
-<img width="986" height="793" alt="image" src="https://github.com/user-attachments/assets/
-58f2b58a-cd81-4814-8cc4-7ffeb3cbde3e" />
+<img width="986" height="793" alt="image" src="https://github.com/user-attachments/assets/001b1c1f-1b58-477f-96a7-851a11051c67" />
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/S0ul3r/Bober-macro-maker)
 
