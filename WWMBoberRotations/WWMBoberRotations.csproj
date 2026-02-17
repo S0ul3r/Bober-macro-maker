@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>WWMBoberRotations</AssemblyName>
     <RootNamespace>WWMBoberRotations</RootNamespace>
-    <Version>1.1.1</Version>
+    <Version>1.2.0</Version>
     <Authors>WWM Bober</Authors>
     <Product>WWM Bober Rotations</Product>
     <Description>Safe macro tool for Where Winds Meet</Description>
