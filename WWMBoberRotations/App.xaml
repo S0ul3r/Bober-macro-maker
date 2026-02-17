@@ -11,7 +11,25 @@
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
             
-            <!-- Custom Converters -->
+            <SolidColorBrush x:Key="SecondaryButtonBackground" Color="#cfe2f3"/>
+            
+            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10"/>
+            </Style>
+            
+            <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatMidBgButton}">
+                <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Background" Value="{StaticResource SecondaryButtonBackground}"/>
+                <Setter Property="Foreground" Value="#FF263238"/>
+            </Style>
+            
+            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}"/>
+            
+            <Style TargetType="materialDesign:Card">
+                <Setter Property="UniformCornerRadius" Value="12"/>
+            </Style>
+            
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
         </ResourceDictionary>

@@ -53,13 +53,13 @@
             <Button Grid.Column="1" 
                     Content="Set Hotkey"
                     Click="SetHotkey_Click"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Style="{StaticResource PrimaryButton}"
                     Margin="0,0,10,0"/>
             
             <Button Grid.Column="2" 
                     Content="Clear"
                     Click="ClearHotkey_Click"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    Style="{StaticResource SecondaryButton}"/>
         </Grid>
 
         <!-- Enabled Checkbox -->
@@ -127,21 +127,21 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button Command="{Binding AddActionCommand}" Margin="2" Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button Command="{Binding AddActionCommand}" Margin="2" Style="{StaticResource PrimaryButton}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Plus" Margin="0,0,5,0"/>
                                 <TextBlock Text="Add"/>
                             </StackPanel>
                         </Button>
                         
-                        <Button Command="{Binding EditActionCommand}" Margin="2" Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button Command="{Binding EditActionCommand}" Margin="2" Style="{StaticResource SecondaryButton}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Pencil" Margin="0,0,5,0"/>
                                 <TextBlock Text="Edit"/>
                             </StackPanel>
                         </Button>
                         
-                        <Button Command="{Binding DeleteActionCommand}" Margin="2" Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button Command="{Binding DeleteActionCommand}" Margin="2" Style="{StaticResource SecondaryButton}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Delete" Margin="0,0,5,0"/>
                                 <TextBlock Text="Delete"/>
@@ -150,11 +150,11 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Command="{Binding MoveUpCommand}" Margin="2" Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button Command="{Binding MoveUpCommand}" Margin="2" Style="{StaticResource SecondaryButton}">
                             <materialDesign:PackIcon Kind="ArrowUp"/>
                         </Button>
                         
-                        <Button Command="{Binding MoveDownCommand}" Margin="2" Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button Command="{Binding MoveDownCommand}" Margin="2" Style="{StaticResource SecondaryButton}">
                             <materialDesign:PackIcon Kind="ArrowDown"/>
                         </Button>
                     </StackPanel>
@@ -168,12 +168,12 @@
                     Click="Save_Click" 
                     IsDefault="True"
                     Margin="0,0,10,0"
-                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    Style="{StaticResource PrimaryButton}"/>
             
             <Button Content="CANCEL" 
                     Click="Cancel_Click" 
                     IsCancel="True"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    Style="{StaticResource SecondaryButton}"/>
         </StackPanel>
     </Grid>
 </Window>

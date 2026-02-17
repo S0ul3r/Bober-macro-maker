@@ -50,12 +50,12 @@
                     Click="Save_Click" 
                     IsDefault="True"
                     Margin="0,0,10,0"
-                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    Style="{StaticResource PrimaryButton}"/>
             
             <Button Content="CANCEL" 
                     Click="Cancel_Click" 
                     IsCancel="True"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    Style="{StaticResource SecondaryButton}"/>
         </StackPanel>
     </Grid>
 </Window>

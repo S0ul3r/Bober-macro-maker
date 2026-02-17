@@ -53,17 +53,17 @@
             <Button Grid.Column="1" 
                     Content="Set Hotkey"
                     Click="SetRecordHotkey_Click"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Style="{StaticResource PrimaryButton}"
                     Margin="0,0,10,0"/>
             
             <Button Grid.Column="2" 
                     Content="Clear"
                     Click="ClearRecordHotkey_Click"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    Style="{StaticResource SecondaryButton}"/>
         </Grid>
 
         <!-- Recorded Actions List -->
-        <materialDesign:Card Grid.Row="4" Margin="0,0,0,15">
+        <materialDesign:Card x:Name="RecordedActionsCard" Grid.Row="4" Margin="0,0,0,15">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -74,6 +74,12 @@
                 <StackPanel Grid.Row="0" 
                             Orientation="Horizontal"
                             Margin="15,15,15,10">
+                    <Ellipse x:Name="RecordingDot"
+                             Width="10" Height="10"
+                             Fill="#FFE53935"
+                             VerticalAlignment="Center"
+                             Margin="0,0,8,0"
+                             Visibility="Collapsed"/>
                     <TextBlock Text="Recorded Actions" 
                                FontSize="16"
                                FontWeight="Bold"/>
@@ -132,7 +138,7 @@
                     <Button x:Name="ClearAllButton"
                             Content="Clear All"
                             Click="ClearAll_Click"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Style="{StaticResource SecondaryButton}"
                             IsEnabled="False"/>
                 </StackPanel>
             </Grid>
@@ -158,7 +164,7 @@
                         HorizontalAlignment="Right">
                 <Button Content="CANCEL"
                         Click="Cancel_Click"
-                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Style="{StaticResource SecondaryButton}"
                         Height="36"
                         Padding="20,0"
                         Margin="0,0,10,0"/>
@@ -166,7 +172,7 @@
                 <Button x:Name="SaveButton"
                         Content="SAVE AS COMBO"
                         Click="Save_Click"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Style="{StaticResource PrimaryButton}"
                         Height="36"
                         Padding="20,0"/>
             </StackPanel>

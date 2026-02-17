@@ -77,6 +77,7 @@ namespace WWMBoberRotations.Views
             if (_recorder.IsRecording)
             {
                 _recorder.StopRecording();
+                SetRecordingVisual(false);
                 UpdateSaveButtonState();
             }
             else
@@ -84,8 +85,24 @@ namespace WWMBoberRotations.Views
                 _displayActions.Clear();
                 ActionCountText.Text = " (0)";
                 _recorder.SetStopHotkey(RecordHotkey);
+                SetRecordingVisual(true);
                 await _recorder.StartRecordingAsync();
+                SetRecordingVisual(false);
                 UpdateSaveButtonState();
+            }
+        }
+
+        private void SetRecordingVisual(bool isRecording)
+        {
+            RecordingDot.Visibility = isRecording ? Visibility.Visible : Visibility.Collapsed;
+            
+            if (isRecording)
+            {
+                RecordedActionsCard.Background = new SolidColorBrush(Color.FromArgb(25, 229, 57, 53));
+            }
+            else
+            {
+                RecordedActionsCard.ClearValue(MaterialDesignThemes.Wpf.Card.BackgroundProperty);
             }
         }
 

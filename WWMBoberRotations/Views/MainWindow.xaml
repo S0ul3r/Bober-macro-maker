@@ -33,7 +33,7 @@
                     Margin="0,0,10,0"
                     HorizontalAlignment="Stretch"
                     Command="{Binding ToggleSystemCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}">
+                    Style="{StaticResource PrimaryButton}">
                 <Button.Content>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <materialDesign:PackIcon Kind="Play" Width="24" Height="24" Margin="0,0,10,0"/>
@@ -52,7 +52,7 @@
                            TextAlignment="Right"/>
                 <Button Content="Set Panic Button" 
                         Command="{Binding SetPanicButtonCommand}"
-                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Style="{StaticResource SecondaryButton}"
                         Height="36"
                         Padding="12,5"
                         FontSize="12"/>
@@ -90,53 +90,88 @@
                              MouseDoubleClick="CombosListBox_MouseDoubleClick">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
-                                <Setter Property="Padding" Value="8,4"/>
-                                <Setter Property="MinHeight" Value="32"/>
+                                <Setter Property="Padding" Value="10,6"/>
+                                <Setter Property="MinHeight" Value="44"/>
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="0" FontSize="13"/>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding IsEnabled, StringFormat='{}{0}'}" Visibility="Collapsed"/>
+                                        <TextBlock FontSize="14" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Opacity" Value="1.0"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                            <Setter Property="Opacity" Value="0.5"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <Run Text="{Binding Name, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="{Binding Hotkey, Mode=OneWay, StringFormat='[{0}]', TargetNullValue='[No Hotkey]', FallbackValue='[No Hotkey]'}" 
+                                                   FontSize="11" 
+                                                   Opacity="0.6"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Actions.Count, Mode=OneWay, StringFormat='{}{0} actions'}" 
+                                                   FontSize="11" 
+                                                   Opacity="0.6"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-                        <Button Command="{Binding NewComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Plus" Margin="0,0,5,0"/>
-                                <TextBlock Text="New Combo"/>
-                            </StackPanel>
-                        </Button>
+                    <Grid Grid.Row="2" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
                         
-                        <Button Command="{Binding EditComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Pencil" Margin="0,0,5,0"/>
-                                <TextBlock Text="Edit Combo"/>
-                            </StackPanel>
-                        </Button>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Command="{Binding NewComboCommand}" Margin="3" Style="{StaticResource PrimaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Plus" Margin="0,0,5,0"/>
+                                    <TextBlock Text="New Combo"/>
+                                </StackPanel>
+                            </Button>
+                            
+                            <Button Command="{Binding RecordMacroCommand}" Margin="3" Style="{StaticResource PrimaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="RecordCircle" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Record Macro"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                         
-                        <Button Command="{Binding RecordMacroCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="RecordCircle" Margin="0,0,5,0"/>
-                                <TextBlock Text="Record Macro"/>
-                            </StackPanel>
-                        </Button>
-                        
-                        <Button Command="{Binding DuplicateComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="ContentCopy" Margin="0,0,5,0"/>
-                                <TextBlock Text="Duplicate"/>
-                            </StackPanel>
-                        </Button>
-                        
-                        <Button Command="{Binding DeleteComboCommand}" Margin="5" Style="{StaticResource MaterialDesignRaisedButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Delete" Margin="0,0,5,0"/>
-                                <TextBlock Text="Delete"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Command="{Binding EditComboCommand}" Margin="3" Style="{StaticResource SecondaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Pencil" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Edit"/>
+                                </StackPanel>
+                            </Button>
+                            
+                            <Button Command="{Binding DuplicateComboCommand}" Margin="3" Style="{StaticResource SecondaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ContentCopy" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Duplicate"/>
+                                </StackPanel>
+                            </Button>
+                            
+                            <Button Command="{Binding DeleteComboCommand}" Margin="3" Style="{StaticResource SecondaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Delete" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Delete"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </materialDesign:Card>
             
@@ -151,9 +186,9 @@
                 <!-- Top: File Operations Buttons -->
                 <StackPanel Grid.Row="0" Orientation="Vertical">
                     <Button Command="{Binding SaveCombosCommand}" 
-                            Margin="0,0,0,5" 
+                            Margin="0,0,0,8" 
                             HorizontalAlignment="Stretch"
-                            Style="{StaticResource MaterialDesignRaisedButton}">
+                            Style="{StaticResource PrimaryButton}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <materialDesign:PackIcon Kind="ContentSave" Margin="0,0,5,0"/>
                             <TextBlock Text="Save"/>
@@ -161,19 +196,21 @@
                     </Button>
                     
                     <Button Command="{Binding LoadCombosCommand}" 
-                            Margin="0,0,0,5"
+                            Margin="0,0,0,8"
                             HorizontalAlignment="Stretch"
-                            Style="{StaticResource MaterialDesignRaisedButton}">
+                            Style="{StaticResource PrimaryButton}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <materialDesign:PackIcon Kind="FolderOpen" Margin="0,0,5,0"/>
                             <TextBlock Text="Load"/>
                         </StackPanel>
                     </Button>
                     
+                    <Separator Margin="0,4,0,12" Opacity="0.3"/>
+                    
                     <Button Command="{Binding ExportCommand}" 
-                            Margin="0,0,0,5"
+                            Margin="0,0,0,8"
                             HorizontalAlignment="Stretch"
-                            Style="{StaticResource MaterialDesignRaisedButton}">
+                            Style="{StaticResource SecondaryButton}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <materialDesign:PackIcon Kind="Export" Margin="0,0,5,0"/>
                             <TextBlock Text="Export"/>
@@ -183,7 +220,7 @@
                     <Button Command="{Binding ImportCommand}" 
                             Margin="0,0,0,5"
                             HorizontalAlignment="Stretch"
-                            Style="{StaticResource MaterialDesignRaisedButton}">
+                            Style="{StaticResource SecondaryButton}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <materialDesign:PackIcon Kind="Import" Margin="0,0,5,0"/>
                             <TextBlock Text="Import"/>
@@ -191,25 +228,15 @@
                     </Button>
                 </StackPanel>
                 
-                <!-- Bottom: Loaded count + Status message + Auto-save Toggle -->
+                <!-- Bottom: Status message + Auto-save Toggle -->
                 <StackPanel Grid.Row="2" Orientation="Vertical" VerticalAlignment="Bottom">
                     <!-- Status Message -->
                     <TextBlock HorizontalAlignment="Center"
                                FontSize="11"
                                Opacity="0.8"
-                               Margin="0,0,0,5"
+                               Margin="0,0,0,10"
                                Text="{Binding StatusMessage, Mode=OneWay}"
                                Visibility="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                    
-                    <!-- Loaded Combos Count -->
-                    <TextBlock HorizontalAlignment="Center"
-                               FontSize="11"
-                               Opacity="0.8"
-                               Margin="0,0,0,10">
-                        <Run Text="Loaded"/>
-                        <Run Text="{Binding Combos.Count, Mode=OneWay}" FontWeight="Bold"/>
-                        <Run Text="combos"/>
-                    </TextBlock>
                     
                     <!-- Auto-save Toggle (single row) -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

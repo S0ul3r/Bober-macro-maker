@@ -14,6 +14,7 @@ namespace WWMBoberRotations.Views
         private TextBox? _durationTextBox;
         private TextBox? _delayAfterTextBox;
         private ComboBox? _mouseButtonCombo;
+        private Button? _captureButton;
 
         public ComboAction? Result { get; private set; }
 
@@ -103,16 +104,16 @@ namespace WWMBoberRotations.Views
             Grid.SetColumn(_keyTextBox, 0);
             inputRow.Children.Add(_keyTextBox);
 
-            var captureButton = new Button
+            _captureButton = new Button
             {
                 Content = "Capture Key",
-                Style = (Style)FindResource("MaterialDesignRaisedButton"),
+                Style = (Style)FindResource("PrimaryButton"),
                 Height = 40,
                 Padding = new Thickness(15, 10, 15, 10)
             };
-            captureButton.Click += (s, e) => CaptureKeyPress();
-            Grid.SetColumn(captureButton, 1);
-            inputRow.Children.Add(captureButton);
+            _captureButton.Click += (s, e) => CaptureKeyPress();
+            Grid.SetColumn(_captureButton, 1);
+            inputRow.Children.Add(_captureButton);
 
             stack.Children.Add(inputRow);
             AddDelayAfterField(stack);
@@ -128,7 +129,9 @@ namespace WWMBoberRotations.Views
                        "Mouse: lmb, rmb, mmb, mouse4, mouse5",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = System.Windows.Media.Brushes.Gray,
-                FontSize = 10
+                FontSize = 11,
+                LineHeight = 18,
+                Margin = new Thickness(0, 10, 0, 0)
             };
             stack.Children.Add(info);
 
@@ -164,16 +167,16 @@ namespace WWMBoberRotations.Views
             Grid.SetColumn(_keyTextBox, 0);
             inputRow.Children.Add(_keyTextBox);
 
-            var captureButton = new Button
+            _captureButton = new Button
             {
                 Content = "Capture Key",
-                Style = (Style)FindResource("MaterialDesignRaisedButton"),
+                Style = (Style)FindResource("PrimaryButton"),
                 Height = 40,
                 Padding = new Thickness(15, 10, 15, 10)
             };
-            captureButton.Click += (s, e) => CaptureKeyPress();
-            Grid.SetColumn(captureButton, 1);
-            inputRow.Children.Add(captureButton);
+            _captureButton.Click += (s, e) => CaptureKeyPress();
+            Grid.SetColumn(_captureButton, 1);
+            inputRow.Children.Add(_captureButton);
 
             stack.Children.Add(inputRow);
             AddDelayAfterField(stack);
@@ -402,9 +405,25 @@ namespace WWMBoberRotations.Views
 
             _keyTextBox.Text = "Press any key...";
             _keyTextBox.IsReadOnly = true;
+            
+            if (_captureButton != null)
+            {
+                _captureButton.Content = "Listening...";
+                _captureButton.Style = (Style)FindResource("SecondaryButton");
+                _captureButton.Foreground = (System.Windows.Media.Brush)FindResource("SecondaryHueMidBrush");
+            }
+            
             Focus();
             PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
             PreviewKeyDown += ActionEditorWindow_PreviewKeyDown;
+        }
+
+        private void ResetCaptureButton()
+        {
+            if (_captureButton == null) return;
+            _captureButton.Content = "Capture Key";
+            _captureButton.Style = (Style)FindResource("PrimaryButton");
+            _captureButton.ClearValue(Button.ForegroundProperty);
         }
 
         private void ActionEditorWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -416,6 +435,7 @@ namespace WWMBoberRotations.Views
 
             _keyTextBox.Text = keyName;
             _keyTextBox.IsReadOnly = false;
+            ResetCaptureButton();
 
             e.Handled = true;
         }
@@ -443,6 +463,7 @@ namespace WWMBoberRotations.Views
                     PreviewKeyDown -= ActionEditorWindow_PreviewKeyDown;
                     _keyTextBox.Text = mouseButton;
                     _keyTextBox.IsReadOnly = false;
+                    ResetCaptureButton();
                 }
             }
         }
