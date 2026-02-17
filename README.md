@@ -144,6 +144,22 @@ The application automatically saves your combos every **30 seconds** when auto-s
 
 **Note:** Manual save (CTRL+S or Save button) clears the autosave and marks all changes as saved.
 
+## Testing
+
+The solution includes a unit test project (xUnit). Run all tests:
+
+```batch
+dotnet test WWMBoberRotations.Tests/WWMBoberRotations.Tests.csproj
+```
+
+Run tests with code coverage:
+
+```batch
+dotnet test WWMBoberRotations.Tests/WWMBoberRotations.Tests.csproj --collect:"XPlat Code Coverage"
+```
+
+Coverage report is written to `TestResults/*/coverage.cobertura.xml`.
+
 ## Building for Distribution
 
 ### Single-File Executable

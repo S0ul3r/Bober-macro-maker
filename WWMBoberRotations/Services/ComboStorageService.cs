@@ -13,9 +13,10 @@ namespace WWMBoberRotations.Services
         private readonly string _autoSaveFilePath;
         private readonly string _dataDir;
 
-        public ComboStorageService()
+        public ComboStorageService(string? baseDirectory = null)
         {
-            _dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+            var baseDir = baseDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+            _dataDir = Path.Combine(baseDir, "Data");
             _dataFilePath = Path.Combine(_dataDir, "combos.json");
             _autoSaveFilePath = Path.Combine(_dataDir, ".autosave.json");
             

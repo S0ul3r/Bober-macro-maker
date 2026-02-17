@@ -72,6 +72,10 @@ Data/
 *.db
 *.sqlite
 
+# Custom examples / user combos
+WWMBoberRotations/Examples/*.json
+!WWMBoberRotations/Examples/example_combos.json
+
 # Published executables (too large for GitHub)
 publish/
 
